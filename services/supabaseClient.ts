@@ -1,10 +1,14 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// ¡IMPORTANTE!
-// Reemplaza los siguientes valores con los de tu propio proyecto de Supabase.
-// Los encontrarás en tu dashboard de Supabase > Project Settings > API.
-const supabaseUrl = 'https://pjwfqphgvwokfvgxunqj.supabase.co'; // <-- Pega tu URL aquí
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd2ZxcGhndndva2Z2Z3h1bnFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI3NzgyMDcsImV4cCI6MjA2ODM1NDIwN30.kbr0W42GZukyQHlr4TsN2RzifwG97NptA8rfq2FoIRg'; // <-- Pega tu clave 'anon' aquí
+// Este código ya NO contiene tus claves.
+// En su lugar, lee las "variables de entorno" que configurarás en Netlify.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Si las variables no están definidas, lanza un error para evitar problemas.
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error("Supabase URL or Anon Key is not defined in environment variables. Please set them in your deployment platform (e.g., Netlify, Vercel).");
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
