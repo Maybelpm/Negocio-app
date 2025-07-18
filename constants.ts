@@ -1,6 +1,8 @@
 
 import { Product, ProductCategory } from './types';
 
+const now = new Date().toISOString();
+
 export const INITIAL_PRODUCTS: Product[] = [
   {
     id: 'prod_1',
@@ -10,6 +12,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 15,
     category: ProductCategory.APPLIANCES,
     imageUrl: 'https://picsum.photos/seed/fridge/400/400',
+    created_at: now,
   },
   {
     id: 'prod_2',
@@ -19,6 +22,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 30,
     category: ProductCategory.APPLIANCES,
     imageUrl: 'https://picsum.photos/seed/coffee/400/400',
+    created_at: now,
   },
   {
     id: 'prod_3',
@@ -28,6 +32,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 150,
     category: ProductCategory.FOOD,
     imageUrl: 'https://picsum.photos/seed/oil/400/400',
+    created_at: now,
   },
   {
     id: 'prod_4',
@@ -37,6 +42,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 200,
     category: ProductCategory.FOOD,
     imageUrl: 'https://picsum.photos/seed/rice/400/400',
+    created_at: now,
   },
   {
     id: 'prod_5',
@@ -46,6 +52,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 45,
     category: ProductCategory.APPLIANCES,
     imageUrl: 'https://picsum.photos/seed/blender/400/400',
+    created_at: now,
   },
   {
     id: 'prod_6',
@@ -55,6 +62,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 300,
     category: ProductCategory.FOOD,
     imageUrl: 'https://picsum.photos/seed/tomato/400/400',
+    created_at: now,
   },
     {
     id: 'prod_7',
@@ -64,6 +72,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 25,
     category: ProductCategory.APPLIANCES,
     imageUrl: 'https://picsum.photos/seed/microwave/400/400',
+    created_at: now,
   },
   {
     id: 'prod_8',
@@ -73,5 +82,6 @@ export const INITIAL_PRODUCTS: Product[] = [
     stock: 120,
     category: ProductCategory.FOOD,
     imageUrl: 'https://picsum.photos/seed/cereal/400/400',
+    created_at: now,
   }
 ];
