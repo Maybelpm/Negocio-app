@@ -46,7 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
         <ul className="space-y-2">
           <NavItem view="DASHBOARD" label="Dashboard" icon="dashboard" currentView={currentView} setView={setView} />
           <NavItem view="POS" label="Punto de Venta" icon="pos" currentView={currentView} setView={setView} />
-          <NavItem view="PRODUCTS" label="Productos e Inventario" icon="products" currentView={currentView} setView={setView} />
+          <NavItem view="PRODUCTS" label="Productos" icon="products" currentView={currentView} setView={setView} />
           <NavItem view="REPORTS" label="Reportes" icon="reports" currentView={currentView} setView={setView} />
         </ul>
       </nav>

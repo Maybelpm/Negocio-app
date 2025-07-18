@@ -1,14 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
-import { ProductWithStock, CartItem, ProductCategory } from '../types';
+import { Product, CartItem, ProductCategory } from '../types';
 import Card from './ui/Card';
 import Input from './ui/Input';
 import Button from './ui/Button';
 import Icon from './ui/Icon';
 
 interface POSViewProps {
-  products: ProductWithStock[];
-  onSale: (cartItems: Omit<CartItem, 'stock'>[]) => void;
+  products: Product[];
+  onSale: (cartItems: CartItem[]) => void;
 }
 
 const POSView: React.FC<POSViewProps> = ({ products, onSale }) => {
@@ -16,9 +16,9 @@ const POSView: React.FC<POSViewProps> = ({ products, onSale }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<ProductCategory | 'all'>('all');
 
-  const addToCart = (product: ProductWithStock) => {
+  const addToCart = (product: Product) => {
     if (product.stock <= 0) {
-        alert("Producto agotado en esta ubicación.");
+        alert("Producto agotado");
         return;
     }
 
@@ -43,7 +43,7 @@ const POSView: React.FC<POSViewProps> = ({ products, onSale }) => {
     if (!product) return;
 
     if (newQuantity > product.stock) {
-        alert("No se puede agregar más que el stock disponible en esta ubicación.");
+        alert("No se puede agregar más que el stock disponible.");
         newQuantity = product.stock;
     }
 
@@ -78,45 +78,40 @@ const POSView: React.FC<POSViewProps> = ({ products, onSale }) => {
           alert("El carrito está vacío.");
           return;
       }
-      const saleItems = cart.map(({ stock, ...item}) => item); // Remove stock property before sale
-      onSale(saleItems);
+      onSale(cart);
       setCart([]);
       alert("¡Venta realizada con éxito!");
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-8rem)]">
+    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-4rem)]">
       {/* Product Grid */}
       <div className="flex-grow lg:w-2/3 animate-fade-in">
         <div className="sticky top-0 bg-gray-900 py-4 z-10">
+            <h1 className="text-3xl font-bold text-white mb-4">Punto de Venta</h1>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <Input
                     placeholder="Buscar producto..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     containerClassName="md:col-span-2"
-                    aria-label="Buscar producto"
                 />
                 <select 
                     value={categoryFilter}
                     onChange={(e) => setCategoryFilter(e.target.value as ProductCategory | 'all')}
                     className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    aria-label="Filtrar por categoría"
                 >
                     <option value="all">Todas las Categorías</option>
                     {Object.values(ProductCategory).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
             </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-4 overflow-y-auto h-[calc(100%-6rem)] pr-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-4 overflow-y-auto h-[calc(100%-10rem)] pr-2">
           {filteredProducts.map((product) => (
             <Card
               key={product.id}
               className={`p-3 cursor-pointer transition-transform transform hover:scale-105 ${product.stock <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => product.stock > 0 && addToCart(product)}
-              role="button"
-              tabIndex={product.stock > 0 ? 0 : -1}
-              aria-label={`Agregar ${product.name} al carrito`}
+              onClick={() => addToCart(product)}
             >
               <img src={product.imageUrl} alt={product.name} className="w-full h-32 object-cover rounded-lg mb-2" />
               <h3 className="font-semibold text-sm truncate">{product.name}</h3>
@@ -144,8 +139,8 @@ const POSView: React.FC<POSViewProps> = ({ products, onSale }) => {
                       <p className="text-xs text-gray-400">${item.price.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-16 text-center p-1" aria-label={`Cantidad de ${item.name}`} />
-                        <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.id)} className="p-2" aria-label={`Eliminar ${item.name} del carrito`}>
+                        <Input type="number" value={item.quantity} onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)} className="w-16 text-center p-1" />
+                        <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.id)} className="p-2">
                           <Icon name="trash" className="h-4 w-4 text-red-500" />
                         </Button>
                     </div>

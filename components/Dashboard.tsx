@@ -1,14 +1,12 @@
 
 import React from 'react';
-import { ProductWithStock, Sale, Location } from '../types';
+import { Product, Sale } from '../types';
 import Card from './ui/Card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface DashboardProps {
-  products: ProductWithStock[]; // Products with stock for current location
+  products: Product[];
   sales: Sale[];
-  locations: Location[];
-  currentLocationId: string;
 }
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
@@ -23,21 +21,14 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
     </Card>
 );
 
-const Dashboard: React.FC<DashboardProps> = ({ products, sales, locations, currentLocationId }) => {
-  const currentLocation = locations.find(l => l.id === currentLocationId);
-  const salesForCurrentLocation = sales.filter(s => s.locationId === currentLocationId);
-
-  // Global Stats
+const Dashboard: React.FC<DashboardProps> = ({ products, sales }) => {
   const totalRevenue = sales.reduce((acc, sale) => acc + sale.total, 0);
   const totalSalesCount = sales.length;
-  
-  // Location-specific Stats
-  const locationRevenue = salesForCurrentLocation.reduce((acc, sale) => acc + sale.total, 0);
-  const locationInventory = products.reduce((acc, product) => acc + product.stock, 0);
+  const productsSold = sales.reduce((acc, sale) => acc + sale.items.reduce((itemAcc, item) => itemAcc + item.quantity, 0), 0);
+  const totalInventory = products.reduce((acc, product) => acc + product.stock, 0);
 
-
-  // Process data for sales chart (last 7 days for the current location)
-  const salesByDay = salesForCurrentLocation.reduce((acc, sale) => {
+  // Process data for sales chart (last 7 days)
+  const salesByDay = sales.reduce((acc, sale) => {
     const date = new Date(sale.date).toLocaleDateString();
     acc[date] = (acc[date] || 0) + sale.total;
     return acc;
@@ -48,7 +39,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, sales, locations, curre
       name: date,
       Ventas: salesByDay[date],
     }))
-    .slice(-7); // Get last 7 entries
+    .slice(0, 7); // Limit to last 7 for simplicity
 
   const topProducts = sales
     .flatMap(s => s.items)
@@ -64,24 +55,18 @@ const Dashboard: React.FC<DashboardProps> = ({ products, sales, locations, curre
 
   return (
     <div className="space-y-8 animate-fade-in">
-        <h2 className="text-2xl font-bold text-white">Resumen Global</h2>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            <StatCard title="Ingresos Totales (Todas las tiendas)" value={`$${totalRevenue.toFixed(2)}`} icon={'🌍'} />
-            <StatCard title="Ventas Totales (Todas las tiendas)" value={totalSalesCount} icon={'🛒'} />
-        </div>
-        
-        <hr className="border-gray-700"/>
-
-        <h2 className="text-2xl font-bold text-white">Detalles de: <span className="text-blue-400">{currentLocation?.name}</span></h2>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-             <StatCard title="Ingresos de esta Ubicación" value={`$${locationRevenue.toFixed(2)}`} icon={'💲'} />
-            <StatCard title="Unidades en Inventario" value={locationInventory} icon={'📦'} />
+        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard title="Ingresos Totales" value={`$${totalRevenue.toFixed(2)}`} icon={'💲'} />
+            <StatCard title="Ventas Totales" value={totalSalesCount} icon={'🛒'} />
+            <StatCard title="Productos Vendidos" value={productsSold} icon={'📦'} />
+            <StatCard title="Inventario Total" value={totalInventory} icon={'🏭'} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2 h-96">
-                <h2 className="text-lg font-semibold mb-4">Rendimiento de Ventas ({currentLocation?.name})</h2>
-                <ResponsiveContainer width="100%" height="90%">
+                <h2 className="text-lg font-semibold mb-4">Rendimiento de Ventas</h2>
+                <ResponsiveContainer width="100%" height="100%">
                    <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
                         <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
@@ -93,7 +78,7 @@ const Dashboard: React.FC<DashboardProps> = ({ products, sales, locations, curre
                 </ResponsiveContainer>
             </Card>
             <Card>
-                <h2 className="text-lg font-semibold mb-4">Productos Más Vendidos (Global)</h2>
+                <h2 className="text-lg font-semibold mb-4">Productos Más Vendidos</h2>
                 <ul className="space-y-4">
                     {sortedTopProducts.length > 0 ? sortedTopProducts.map(([name, quantity]) => (
                         <li key={name} className="flex justify-between items-center">
