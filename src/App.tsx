@@ -99,7 +99,6 @@ const App: React.FC = () => {
     const total = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
     const newSalePayload = {
-      id: `sale_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
       items: cartItems.map(({ id, name, price, quantity }) => ({ id, name, price, quantity })),
       total,
     };

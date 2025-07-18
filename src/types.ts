@@ -43,13 +43,34 @@ export interface Database {
     Tables: {
       products: {
         Row: Product;
-        Insert: Omit<Product, 'created_at'>;
-        Update: Partial<Omit<Product, 'id' | 'created_at'>>;
+        Insert: {
+          id: string;
+          name: string;
+          description: string;
+          price: number;
+          stock: number;
+          category: ProductCategory | string;
+          imageUrl?: string;
+        };
+        Update: Partial<{
+          name: string;
+          description: string;
+          price: number;
+          stock: number;
+          category: ProductCategory | string;
+          imageUrl?: string;
+        }>;
       };
       sales: {
         Row: Sale;
-        Insert: Omit<Sale, 'created_at'>;
-        Update: Partial<Omit<Sale, 'id' | 'created_at'>>;
+        Insert: {
+          items: SaleItem[];
+          total: number;
+        };
+        Update: Partial<{
+          items: SaleItem[];
+          total: number;
+        }>;
       };
     };
     Views: {
