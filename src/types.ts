@@ -44,7 +44,6 @@ export interface Database {
       products: {
         Row: Product;
         Insert: {
-          id: string;
           name: string;
           description: string;
           price: number;

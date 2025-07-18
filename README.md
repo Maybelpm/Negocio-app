@@ -34,9 +34,12 @@ Este proyecto es un sistema de punto de venta (POS) inteligente construido con R
     Ve a la sección **SQL Editor** en tu panel de Supabase y ejecuta el siguiente script para crear las tablas y funciones necesarias.
 
     ```sql
-    -- 1. Tabla para los productos
+    -- 1. Habilitar la extensión para UUIDs (ejecutar una sola vez)
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+    -- 2. Tabla para los productos
     CREATE TABLE products (
-      id TEXT PRIMARY KEY,
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       name TEXT NOT NULL,
       description TEXT,
       price NUMERIC NOT NULL,
@@ -46,16 +49,16 @@ Este proyecto es un sistema de punto de venta (POS) inteligente construido con R
       created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
     );
 
-    -- 2. Tabla para las ventas
+    -- 3. Tabla para las ventas
     CREATE TABLE sales (
-      id TEXT PRIMARY KEY,
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
       items JSONB NOT NULL,
       total NUMERIC NOT NULL
     );
 
-    -- 3. Función para decrementar el stock de forma segura (atomicidad)
-    CREATE OR REPLACE FUNCTION decrement_product_stock(product_id_in text, quantity_sold int)
+    -- 4. Función para decrementar el stock de forma segura (atomicidad)
+    CREATE OR REPLACE FUNCTION decrement_product_stock(product_id_in uuid, quantity_sold int)
     RETURNS void AS $$
     BEGIN
       UPDATE products
@@ -64,6 +67,29 @@ Este proyecto es un sistema de punto de venta (POS) inteligente construido con R
     END;
     $$ LANGUAGE plpgsql;
 
+    -- 5. Habilitar Row Level Security (RLS) en las tablas
+    ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
+
+    -- 6. Crear políticas para permitir el acceso público (anon)
+    -- Permitir lectura pública de productos
+    CREATE POLICY "Public products are viewable by everyone."
+      ON products FOR SELECT
+      USING (true);
+
+    -- Permitir lectura pública de ventas
+    CREATE POLICY "Public sales are viewable by everyone."
+      ON sales FOR SELECT
+      USING (true);
+
+    -- Permitir a los usuarios anónimos crear ventas
+    CREATE POLICY "Anyone can create a sale."
+      ON sales FOR INSERT
+      WITH CHECK (true);
+
+    -- Nota: Las actualizaciones de stock se manejan a través de la función RPC segura ('decrement_product_stock'),
+    -- que se ejecuta con privilegios de administrador, por lo que no necesitamos una política de UPDATE
+    -- para los usuarios anónimos en la tabla de productos.
     ```
 5. **Habilita Realtime en Supabase:**
     - Ve a **Database > Replication** en tu panel de Supabase.
