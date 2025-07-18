@@ -1,58 +1,47 @@
-
 import React from 'react';
-import { AppView } from '../types';
-import Icon from './ui/Icon';
+import { HomeIcon, ShoppingBagIcon, ArchiveBoxIcon, ChartBarIcon } from '@heroicons/react/24/solid';
+import { AppView } from '@/types';
 
 interface SidebarProps {
   currentView: AppView;
   setView: (view: AppView) => void;
 }
 
-const NavItem: React.FC<{
-  view: AppView;
-  label: string;
-  icon: string;
-  currentView: AppView;
-  setView: (view: AppView) => void;
-}> = ({ view, label, icon, currentView, setView }) => {
-  const isActive = currentView === view;
-  return (
-    <li>
-      <button
-        onClick={() => setView(view)}
-        className={`w-full flex items-center p-3 rounded-lg transition-colors duration-200 ${
-          isActive
-            ? 'bg-blue-600 text-white'
-            : 'text-gray-400 hover:bg-gray-700 hover:text-white'
-        }`}
-      >
-        <Icon name={icon} className="h-5 w-5 mr-3" />
-        <span className="font-medium">{label}</span>
-      </button>
-    </li>
-  );
-};
+const navItems = [
+  { view: 'DASHBOARD' as AppView, label: 'Dashboard', icon: HomeIcon },
+  { view: 'POS' as AppView, label: 'Punto de Venta', icon: ShoppingBagIcon },
+  { view: 'PRODUCTS' as AppView, label: 'Productos', icon: ArchiveBoxIcon },
+  { view: 'REPORTS' as AppView, label: 'Reportes', icon: ChartBarIcon },
+];
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
   return (
-    <aside className="w-64 bg-gray-800 p-4 flex flex-col fixed h-full">
-      <div className="flex items-center mb-8">
-        <div className="bg-blue-600 p-2 rounded-lg mr-3">
-            <Icon name="pos" className="h-8 w-8 text-white"/>
-        </div>
-        <h1 className="text-xl font-bold text-white">OmniPOS</h1>
+    <aside className="fixed top-0 left-0 w-64 h-full bg-gray-800 text-white flex flex-col shadow-2xl">
+      <div className="px-8 py-6 border-b border-gray-700">
+        <h1 className="text-2xl font-bold text-white">Omni<span className="text-blue-400">POS</span></h1>
+        <p className="text-xs text-gray-400">Venta Inteligente</p>
       </div>
-      <nav>
-        <ul className="space-y-2">
-          <NavItem view="DASHBOARD" label="Dashboard" icon="dashboard" currentView={currentView} setView={setView} />
-          <NavItem view="POS" label="Punto de Venta" icon="pos" currentView={currentView} setView={setView} />
-          <NavItem view="PRODUCTS" label="Productos" icon="products" currentView={currentView} setView={setView} />
-          <NavItem view="REPORTS" label="Reportes" icon="reports" currentView={currentView} setView={setView} />
+      <nav className="flex-1 px-4 py-4">
+        <ul>
+          {navItems.map(item => (
+            <li key={item.view}>
+              <button
+                onClick={() => setView(item.view)}
+                className={`flex items-center w-full px-4 py-3 my-1 rounded-lg transition-colors
+                  ${currentView === item.view 
+                    ? 'bg-blue-500 text-white shadow-lg' 
+                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+              >
+                <item.icon className="h-6 w-6 mr-3" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            </li>
+          ))}
         </ul>
       </nav>
-      <div className="mt-auto text-center text-gray-500 text-xs">
-          <p>Hecho con ❤️ para tu negocio.</p>
-          <p>&copy; {new Date().getFullYear()} OmniPOS</p>
+      <div className="px-8 py-4 border-t border-gray-700 text-center text-xs text-gray-500">
+        <p>&copy; {new Date().getFullYear()} OmniPOS</p>
       </div>
     </aside>
   );

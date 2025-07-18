@@ -1,8 +1,10 @@
-
 import { useState, useEffect } from 'react';
 
-function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
+    if (typeof window === 'undefined') {
+      return initialValue;
+    }
     try {
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
@@ -12,19 +14,42 @@ function useLocalStorage<T,>(key: string, initialValue: T): [T, React.Dispatch<R
     }
   });
 
-  useEffect(() => {
+  const setValue = (value: T | ((val: T) => T)) => {
     try {
-      const valueToStore =
-        typeof storedValue === 'function'
-          ? storedValue(storedValue)
-          : storedValue;
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      setStoredValue(valueToStore);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      }
     } catch (error) {
       console.error(error);
     }
-  }, [key, storedValue]);
+  };
+  
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === key) {
+        try {
+          if(e.newValue) {
+            setStoredValue(JSON.parse(e.newValue));
+          } else {
+            setStoredValue(initialValue);
+          }
+        } catch(error) {
+          console.error(error);
+          setStoredValue(initialValue);
+        }
+      }
+    };
 
-  return [storedValue, setStoredValue];
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [key, initialValue]);
+
+
+  return [storedValue, setValue];
 }
 
 export default useLocalStorage;

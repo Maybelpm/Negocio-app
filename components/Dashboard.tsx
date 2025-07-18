@@ -1,94 +1,80 @@
-
 import React from 'react';
-import { Product, Sale } from '../types';
-import Card from './ui/Card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Product, Sale } from '@/types';
 
 interface DashboardProps {
   products: Product[];
   sales: Sale[];
 }
 
-const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
-    <Card className="flex items-center p-4">
-        <div className="p-3 mr-4 text-blue-500 bg-blue-100 rounded-full dark:text-blue-100 dark:bg-blue-500">
-            {icon}
-        </div>
-        <div>
-            <p className="mb-2 text-sm font-medium text-gray-400">{title}</p>
-            <p className="text-lg font-semibold text-white">{value}</p>
-        </div>
-    </Card>
-);
-
 const Dashboard: React.FC<DashboardProps> = ({ products, sales }) => {
   const totalRevenue = sales.reduce((acc, sale) => acc + sale.total, 0);
-  const totalSalesCount = sales.length;
-  const productsSold = sales.reduce((acc, sale) => acc + sale.items.reduce((itemAcc, item) => itemAcc + item.quantity, 0), 0);
-  const totalInventory = products.reduce((acc, product) => acc + product.stock, 0);
+  const totalSales = sales.length;
+  const productsInStock = products.reduce((acc, product) => acc + product.stock, 0);
 
-  // Process data for sales chart (last 7 days)
+  // Process sales data for the chart
   const salesByDay = sales.reduce((acc, sale) => {
-    const date = new Date(sale.date).toLocaleDateString();
-    acc[date] = (acc[date] || 0) + sale.total;
+    const date = new Date(sale.date).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+    if (!acc[date]) {
+      acc[date] = 0;
+    }
+    acc[date] += sale.total;
     return acc;
-  }, {} as { [key: string]: number });
+  }, {} as Record<string, number>);
 
-  const chartData = Object.keys(salesByDay)
-    .map(date => ({
-      name: date,
-      Ventas: salesByDay[date],
-    }))
-    .slice(0, 7); // Limit to last 7 for simplicity
+  const chartData = Object.keys(salesByDay).map(date => ({
+    date,
+    Ingresos: salesByDay[date],
+  })).reverse();
 
-  const topProducts = sales
-    .flatMap(s => s.items)
-    .reduce((acc, item) => {
-      acc[item.name] = (acc[item.name] || 0) + item.quantity;
-      return acc;
-    }, {} as {[key: string]: number})
-    
-  const sortedTopProducts = Object.entries(topProducts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5);
 
+  const formatCurrency = (value: number) => `$${value.toFixed(2)}`;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-        <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <StatCard title="Ingresos Totales" value={`$${totalRevenue.toFixed(2)}`} icon={'💲'} />
-            <StatCard title="Ventas Totales" value={totalSalesCount} icon={'🛒'} />
-            <StatCard title="Productos Vendidos" value={productsSold} icon={'📦'} />
-            <StatCard title="Inventario Total" value={totalInventory} icon={'🏭'} />
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+      
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+          <h3 className="text-lg font-medium text-gray-400">Ingresos Totales</h3>
+          <p className="text-3xl font-semibold text-green-400">{formatCurrency(totalRevenue)}</p>
         </div>
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+          <h3 className="text-lg font-medium text-gray-400">Ventas Totales</h3>
+          <p className="text-3xl font-semibold text-blue-400">{totalSales}</p>
+        </div>
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+          <h3 className="text-lg font-medium text-gray-400">Productos en Stock</h3>
+          <p className="text-3xl font-semibold text-purple-400">{productsInStock}</p>
+        </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2 h-96">
-                <h2 className="text-lg font-semibold mb-4">Rendimiento de Ventas</h2>
-                <ResponsiveContainer width="100%" height="100%">
-                   <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
-                        <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
-                        <YAxis stroke="#9ca3af" fontSize={12} tickFormatter={(value) => `$${value}`} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #4b5563' }} />
-                        <Legend />
-                        <Bar dataKey="Ventas" fill="#3b82f6" />
-                    </BarChart>
-                </ResponsiveContainer>
-            </Card>
-            <Card>
-                <h2 className="text-lg font-semibold mb-4">Productos Más Vendidos</h2>
-                <ul className="space-y-4">
-                    {sortedTopProducts.length > 0 ? sortedTopProducts.map(([name, quantity]) => (
-                        <li key={name} className="flex justify-between items-center">
-                            <span className="text-gray-300">{name}</span>
-                            <span className="font-semibold text-white bg-gray-700 px-2 py-1 rounded-md text-sm">{quantity} vendidos</span>
-                        </li>
-                    )) : <p className="text-gray-400 text-center mt-8">No hay datos de ventas aún.</p>}
-                </ul>
-            </Card>
-        </div>
+      {/* Sales Chart */}
+      <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+         <h3 className="text-xl font-semibold text-white mb-4">Ingresos por Día</h3>
+         {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
+                <XAxis dataKey="date" stroke="#A0AEC0" />
+                <YAxis stroke="#A0AEC0" tickFormatter={(value) => formatCurrency(value as number)}/>
+                <Tooltip 
+                    contentStyle={{ backgroundColor: '#2D3748', border: 'none', borderRadius: '0.5rem' }} 
+                    labelStyle={{ color: '#E2E8F0' }}
+                    itemStyle={{ color: '#63B3ED' }}
+                    formatter={(value) => formatCurrency(value as number)}
+                />
+                <Legend wrapperStyle={{ color: '#E2E8F0' }}/>
+                <Bar dataKey="Ingresos" fill="#63B3ED" radius={[4, 4, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+         ) : (
+            <div className="flex items-center justify-center h-72">
+                <p className="text-gray-400">No hay datos de ventas para mostrar en el gráfico.</p>
+            </div>
+         )}
+      </div>
     </div>
   );
 };

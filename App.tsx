@@ -1,13 +1,12 @@
-
 import React, { useState, useCallback } from 'react';
-import { Product, Sale, AppView, CartItem, ProductCategory } from './types';
-import { INITIAL_PRODUCTS } from './constants';
-import useLocalStorage from './hooks/useLocalStorage';
-import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
-import ProductsView from './components/Products';
-import POSView from './components/POS';
-import ReportsView from './components/Reports';
+import { Product, Sale, AppView, CartItem } from '@/types';
+import { INITIAL_PRODUCTS } from '@/constants';
+import useLocalStorage from '@/hooks/useLocalStorage';
+import Sidebar from '@/components/Sidebar';
+import Dashboard from '@/components/Dashboard';
+import ProductsView from '@/components/Products';
+import POSView from '@/components/POS';
+import ReportsView from '@/components/Reports';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('DASHBOARD');
