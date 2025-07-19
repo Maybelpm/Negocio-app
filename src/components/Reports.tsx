@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sale, SaleItem } from '@/types';
+import { Sale, SaleItem } from '../types';
 
 interface ReportsViewProps {
   sales: Sale[];

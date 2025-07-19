@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Product, CartItem } from '@/types';
+import { Product, CartItem } from '../types';
 import { ShoppingCartIcon, XCircleIcon } from '@heroicons/react/24/solid';
 
 interface POSViewProps {

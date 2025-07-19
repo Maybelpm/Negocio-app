@@ -1,5 +1,5 @@
 import React from 'react';
-import { Product, Sale } from '@/types';
+import { Product, Sale } from '../types';
 import { ArrowTrendingUpIcon, BanknotesIcon, CubeIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
 interface DashboardProps {

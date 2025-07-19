@@ -6,7 +6,7 @@ import {
   DocumentChartBarIcon,
   CpuChipIcon,
 } from '@heroicons/react/24/outline';
-import { AppView } from '@/types';
+import { AppView } from '../types';
 
 interface SidebarProps {
   currentView: AppView;

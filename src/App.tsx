@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Product, Sale, AppView, CartItem } from '@/types';
+import { Product, Sale, AppView, CartItem, SaleItem } from './types';
 import { supabase } from '@/lib/supabaseClient';
 import Sidebar from '@/components/Sidebar';
 import Dashboard from '@/components/Dashboard';
@@ -98,8 +98,15 @@ const App: React.FC = () => {
     
     const total = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
+    const saleItems: SaleItem[] = cartItems.map((cartItem) => ({
+      id: cartItem.id,
+      name: cartItem.name,
+      price: cartItem.price,
+      quantity: cartItem.quantity,
+    }));
+
     const newSalePayload = {
-      items: cartItems.map(({ id, name, price, quantity }) => ({ id, name, price, quantity })),
+      items: saleItems,
       total,
     };
 
