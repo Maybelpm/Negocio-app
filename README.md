@@ -58,6 +58,8 @@ Este proyecto es un sistema de punto de venta (POS) inteligente construido con R
     );
 
     -- 4. Función para decrementar el stock de forma segura (atomicidad)
+    -- Se añade SECURITY DEFINER para que la función se ejecute con los permisos del creador (admin)
+    -- y pueda modificar la tabla de productos, solucionando el problema de que el stock no se descuenta.
     CREATE OR REPLACE FUNCTION decrement_product_stock(product_id_in uuid, quantity_sold int)
     RETURNS void AS $$
     BEGIN
@@ -65,7 +67,7 @@ Este proyecto es un sistema de punto de venta (POS) inteligente construido con R
       SET stock = stock - quantity_sold
       WHERE id = product_id_in AND stock >= quantity_sold;
     END;
-    $$ LANGUAGE plpgsql;
+    $$ LANGUAGE plpgsql SECURITY DEFINER;
 
     -- 5. Habilitar Row Level Security (RLS) en las tablas
     ALTER TABLE products ENABLE ROW LEVEL SECURITY;
@@ -88,8 +90,8 @@ Este proyecto es un sistema de punto de venta (POS) inteligente construido con R
       WITH CHECK (true);
 
     -- Nota: Las actualizaciones de stock se manejan a través de la función RPC segura ('decrement_product_stock'),
-    -- que se ejecuta con privilegios de administrador, por lo que no necesitamos una política de UPDATE
-    -- para los usuarios anónimos en la tabla de productos.
+    -- que se ejecuta con privilegios de administrador gracias a SECURITY DEFINER, por lo que no necesitamos
+    -- una política de UPDATE para los usuarios anónimos en la tabla de productos.
     ```
 5. **Habilita Realtime en Supabase:**
     - Ve a **Database > Replication** en tu panel de Supabase.

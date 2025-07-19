@@ -6,6 +6,14 @@ export enum ProductCategory {
   OTHER = 'Otros',
 }
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
 export interface Product {
   id: string;
   name: string;
@@ -64,11 +72,11 @@ export interface Database {
       sales: {
         Row: Sale;
         Insert: {
-          items: SaleItem[];
+          items: Json;
           total: number;
         };
         Update: Partial<{
-          items: SaleItem[];
+          items: Json;
           total: number;
         }>;
       };

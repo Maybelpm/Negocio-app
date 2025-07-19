@@ -6,8 +6,16 @@ export enum ProductCategory {
   OTHER = 'Otros',
 }
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
 export interface Product {
-  id: string;
+  id: string; // UUID
   name: string;
   description: string;
   price: number;
@@ -29,7 +37,7 @@ export interface SaleItem {
 }
 
 export interface Sale {
-  id: string;
+  id: string; // UUID
   created_at: string;
   items: SaleItem[];
   total: number;
@@ -37,7 +45,7 @@ export interface Sale {
 
 export type AppView = 'DASHBOARD' | 'POS' | 'PRODUCTS' | 'REPORTS';
 
-// Supabase DB schema
+// Supabase DB schema matching the README.md SQL script
 export interface Database {
   public: {
     Tables: {
@@ -48,7 +56,7 @@ export interface Database {
           description: string;
           price: number;
           stock: number;
-          category: ProductCategory | string;
+          category: string;
           imageUrl?: string;
         };
         Update: Partial<{
@@ -56,18 +64,18 @@ export interface Database {
           description: string;
           price: number;
           stock: number;
-          category: ProductCategory | string;
+          category: string;
           imageUrl?: string;
         }>;
       };
       sales: {
         Row: Sale;
         Insert: {
-          items: SaleItem[];
+          items: Json;
           total: number;
         };
         Update: Partial<{
-          items: SaleItem[];
+          items: Json;
           total: number;
         }>;
       };
@@ -78,7 +86,7 @@ export interface Database {
     Functions: {
         decrement_product_stock: {
             Args: {
-                product_id_in: string,
+                product_id_in: string, // UUID
                 quantity_sold: number
             },
             Returns: void
