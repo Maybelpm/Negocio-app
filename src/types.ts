@@ -71,11 +71,11 @@ export interface Database {
       sales: {
         Row: Sale;
         Insert: {
-          items: Json;
+          items: SaleItem[];
           total: number;
         };
         Update: Partial<{
-          items: Json;
+          items: SaleItem[];
           total: number;
         }>;
       };
