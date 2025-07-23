@@ -32,6 +32,7 @@ const App: React.FC = () => {
       const salesPromise = supabase
         .from('sales')
         .select('*')
+        .neq('is_canceled', true)              // <— excluye anuladas
         .order('created_at', { ascending: false });
 
       const [{ data: productsData, error: productsError }, { data: salesData, error: salesError }] = await Promise.all([productsPromise, salesPromise]);
