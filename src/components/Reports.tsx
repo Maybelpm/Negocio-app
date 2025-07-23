@@ -3,9 +3,10 @@ import { Sale, SaleItem } from '../types';
 
 interface ReportsViewProps {
   sales: Sale[];
+   onRevertSale?: (saleId: string) => void;
 }
 
-const ReportsView: React.FC<ReportsViewProps> = ({ sales }) => {
+const ReportsView: React.FC<ReportsViewProps> = ({ sales, onRevertSale }) => {
   return (
      <div>
       <h1 className="text-3xl font-bold tracking-tight text-white mb-6">Reportes de Ventas</h1>
@@ -16,17 +17,32 @@ const ReportsView: React.FC<ReportsViewProps> = ({ sales }) => {
        <div className="bg-gray-800/50 backdrop-blur-sm border border-white/10 rounded-lg shadow">
          <ul className="divide-y divide-gray-700">
             {sales.map(sale => (
-                 <li key={sale.id} className="p-4 flex justify-between items-center hover:bg-gray-700/50">
-                     <div>
-                        <p className="text-white font-semibold">Venta #{sale.id.slice(-6)}</p>
-                        <p className="text-sm text-gray-400">{new Date(sale.created_at).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-xl font-bold text-green-400">${sale.total.toFixed(2)}</p>
-                        <p className="text-sm text-gray-400">{sale.items.reduce((acc, item) => acc + item.quantity, 0)} artículo(s)</p>
-                    </div>
-                </li>
+             <li key={sale.id} className="p-4 flex justify-between items-center hover:bg-gray-700/50">
+              <div>
+                 <p className="text-white font-semibold">Venta #{sale.id.slice(-6)}</p>
+                 <p className="text-sm text-gray-400">{new Date(sale.created_at).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+              </div>
+              <div className="text-right">
+                 <p className="text-xl font-bold text-green-400">${sale.total.toFixed(2)}</p>
+                 <p className="text-sm text-gray-400">{sale.items.reduce((acc, item) => acc + item.quantity, 0)} artículo(s)</p>
+              </div>
+              {/* --- Inserta aquí el botón de anular --- */}
+              <div>
+                {!sale.is_canceled && onRevertSale && (
+                  <button
+                    onClick={() => onRevertSale(sale.id)}
+                    className="ml-4 px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                  >
+                    Anular
+                  </button>
+                )}
+                {sale.is_canceled && (
+                  <span className="ml-4 text-gray-500">Anulada</span>
+                )}
+              </div>
+              </li>
             ))}
+
          </ul>
       </div>
     </div>

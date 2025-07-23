@@ -136,6 +136,18 @@ const App: React.FC = () => {
 
   }, []);
 
+  const handleRevertSale = useCallback(async (saleId: string) => {
+    const { error } = await supabase.rpc('revertir_venta', { sale_id_in: saleId });
+    if (error) {
+      console.error('Error al revertir venta:', error.message);
+      alert('No se pudo anular la venta: ' + error.message);
+      return;
+    }
+    // recarga productos y ventas
+    await fetchData();    // ya viene en App y refresca productos+ventas
+    alert('Venta anulada y stock restaurado.');
+  }, [fetchData]); 
+
   const renderView = () => {
     if (loading) {
       return <div className="flex justify-center items-center h-full"><p className="text-xl">Cargando datos...</p></div>;
@@ -157,7 +169,7 @@ const App: React.FC = () => {
       case 'PRODUCTS':
         return <ProductsView products={products} setProducts={setProducts} />;
       case 'REPORTS':
-        return <ReportsView sales={sales} />;
+        return <ReportsView sales={sales} onRevertSale={handleRevertSale} />;
       default:
         return <Dashboard products={products} sales={sales} />;
     }
