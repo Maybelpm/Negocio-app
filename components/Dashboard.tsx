@@ -25,6 +25,9 @@ const StatCard: React.FC<{ title: string; value: string; icon: React.ElementType
 
 
 const Dashboard: React.FC<DashboardProps> = ({ products, sales }) => {
+    // 1) Filtramos sólo las ventas NO anuladas
+    const validSales = sales.filter(sale => !sale.is_canceled);
+    // 2) Calculamos estadísticas sobre validSales en lugar de sales directo
     const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
     const lowStockItems = products.filter(p => p.stock <= 10).length;
     const totalProducts = products.length;
