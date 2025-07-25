@@ -71,25 +71,58 @@ const ProductsView: React.FC<ProductsViewProps> = ({ products, setProducts }) =>
   };
 
   // Subir imagen para producto existente
-  const handleUploadImage = async (productId: string) => {
-    const file = selectedImage[productId];
-    if (!file) return alert('Selecciona una imagen.');
-    const path = `${productId}/${file.name}`;
-    const { error: upErr } = await supabase
-      .storage
-      .from('product-images')
-      .upload(path, file, { upsert: true });
-    if (upErr) { alert('Error subiendo imagen.'); return; }
-    const { publicURL } = supabase
-      .storage
-      .from('product-images')
-      .getPublicUrl(path);
-    await supabase
-      .from('products')
-      .update({ imageurl: publicURL })
-      .eq('id', productId);
-    await fetchProducts();
-  };
+const handleUploadImage = async (productId: string) => {
+  // 1) Recupera el fichero del estado
+  const file = selectedImage[productId];
+  if (!file) {
+    return alert('Selecciona un archivo antes de subir.');
+  }
+
+  // 2) Sanitiza el nombre del fichero
+  const rawName     = file.name;
+  const normalized  = rawName.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  const safeName    = normalized
+    .replace(/\s+/g, '_')        // espacios → guiones bajos
+    .replace(/[^a-zA-Z0-9._-]/g, '');
+
+  const path = `${productId}/${safeName}`;
+
+  // 3) Sube el archivo al bucket 'product-images'
+  const { error: upErr } = await supabase
+    .storage
+    .from('product-images')
+    .upload(path, file, { upsert: true });
+  if (upErr) {
+    console.error('UPLOAD ERROR →', upErr);
+    return alert('Error subiendo imagen: ' + upErr.message);
+  }
+
+  // 4) Obtiene la URL pública
+  const { data: urlData, error: urlErr } = await supabase
+    .storage
+    .from('product-images')
+    .getPublicUrl(path);
+  if (urlErr) {
+    console.error('GET URL ERROR →', urlErr);
+    return alert('Error obteniendo URL: ' + urlErr.message);
+  }
+  const publicURL = urlData.publicUrl;
+
+  // 5) Actualiza la fila de producto con la URL
+  const { error: updErr } = await supabase
+    .from('products')
+    .update({ imageurl: publicURL })
+    .eq('id', productId);
+  if (updErr) {
+    console.error('UPDATE PRODUCT ERROR →', updErr);
+    return alert('Error actualizando producto: ' + updErr.message);
+  }
+
+  // 6) Refresca la lista de productos para que se vea al instante
+  await fetchProducts();
+  alert('Imagen subida correctamente.');
+};
+
 
   // Carga inicial de productos
   useEffect(() => { fetchProducts(); }, []);
