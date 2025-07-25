@@ -88,14 +88,18 @@ const handleUploadImage = async (productId: string) => {
   const path = `${productId}/${safeName}`;
 
   // 3) Sube el archivo al bucket 'product-images'
-  const { error: upErr } = await supabase
+  const { error: upErr, data: upData } = await supabase
     .storage
     .from('product-images')
     .upload(path, file, { upsert: true });
+
+  console.log('💾 upload response:', { upErr, upData });  // ← AÑADE esto
+
   if (upErr) {
     console.error('UPLOAD ERROR →', upErr);
     return alert('Error subiendo imagen: ' + upErr.message);
   }
+
 
   // 4) Obtiene la URL pública
   const { data: urlData, error: urlErr } = await supabase
