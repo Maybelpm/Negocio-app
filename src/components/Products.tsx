@@ -43,9 +43,11 @@ const ProductsView: React.FC<ProductsViewProps> = ({ products }) => {
       .select()
       .single();
     if (insErr || !created) {
-      alert('Error creando producto.');
+      console.error('CREATE PRODUCT ERROR →', insErr);      // ← añade esta línea
+      alert('Error creando producto: ' + (insErr?.message || 'Unknown error'));
       return;
     }
+
     // Si seleccionaron imagen, súbela y actualiza imageurl
     if (newProduct.imageFile) {
       const path = `${created.id}/${newProduct.imageFile.name}`;
