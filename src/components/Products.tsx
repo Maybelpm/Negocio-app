@@ -97,12 +97,6 @@ const ProductsView: React.FC<ProductsViewProps> = ({ products, setProducts }) =>
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-white">Gestión de Productos</h1>
-        <button className="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-500 disabled:bg-gray-500" disabled>
-          Añadir Producto
-        </button>
-      </div>
          {/* → FORMULARIO NUEVO PRODUCTO */}
      <div className="mb-6 p-4 bg-gray-800/50 rounded-lg">
        <h1 className="text-xl font-semibold text-white mb-2">Nuevo Producto</h1>
