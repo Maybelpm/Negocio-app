@@ -7,7 +7,7 @@ interface ProductsViewProps {
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>; // This prop might be used later for optimistic updates
 }
 
-const ProductsView: React.FC<ProductsViewProps> = ({ products }) => {
+const ProductsView: React.FC<ProductsViewProps> = ({ products, setProducts }) => {
     // estados para nuevo producto e imágenes seleccionadas
   const [newProduct, setNewProduct] = useState({
     name: '',
