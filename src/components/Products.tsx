@@ -184,27 +184,6 @@ const handleUploadImage = async (productId: string) => {
         Subir imagen
       </button>
     </div>
-
-   {/* ← AÑADIR selector de imagen y botón de subida */}
-   <div className="mt-2 flex items-center">
-     <input
-       type="file"
-       accept="image/*"
-       onChange={e =>
-         setSelectedImage(prev => ({
-           ...prev,
-           [product.id]: e.target.files?.[0] || null
-         }))
-       }
-       className="block"
-     />
-     <button
-       onClick={() => handleUploadImage(product.id)}
-       className="ml-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-     >
-       Subir imagen
-     </button>
-   </div>
    {/* ← FIN selector de imagen */}
 
   </li>
