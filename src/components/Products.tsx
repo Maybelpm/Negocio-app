@@ -72,61 +72,35 @@ const ProductsView: React.FC<ProductsViewProps> = ({ products, setProducts }) =>
 
   // Subir imagen para producto existente
 const handleUploadImage = async (productId: string) => {
-  // 1) Recupera el fichero del estado
   const file = selectedImage[productId];
-  if (!file) {
-    return alert('Selecciona un archivo antes de subir.');
-  }
+  if (!file) return alert('Selecciona una imagen primero.');
 
-  // 2) Sanitiza el nombre del fichero
-  const rawName     = file.name;
-  const normalized  = rawName.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
-  const safeName    = normalized
-    .replace(/\s+/g, '_')        // espacios → guiones bajos
-    .replace(/[^a-zA-Z0-9._-]/g, '');
+  // Sanitiza el nombre del archivo
+  const rawName   = file.name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  const safeName  = rawName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
 
-  const path = `${productId}/${safeName}`;
+  // Convierte a Base64
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onloadend = async () => {
+    const base64 = (reader.result as string).split(',')[1];
 
-  // 3) Sube el archivo al bucket 'product-images'
-  const { error: upErr, data: upData } = await supabase
-    .storage
-    .from('product-images')
-    .upload(path, file, { upsert: true });
+    // Llama a la Netlify Function
+    const res = await fetch('/.netlify/functions/uploadImage', {
+      method: 'POST',
+      body: JSON.stringify({ productId, fileName: safeName, fileBase64: base64 }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      console.error('Fn upload error', json.error);
+      return alert('Error subiendo imagen: ' + json.error);
+    }
 
-  console.log('💾 upload response:', { upErr, upData });  // ← AÑADE esto
-
-  if (upErr) {
-    console.error('UPLOAD ERROR →', upErr);
-    return alert('Error subiendo imagen: ' + upErr.message);
-  }
-
-
-  // 4) Obtiene la URL pública
-  const { data: urlData, error: urlErr } = await supabase
-    .storage
-    .from('product-images')
-    .getPublicUrl(path);
-  if (urlErr) {
-    console.error('GET URL ERROR →', urlErr);
-    return alert('Error obteniendo URL: ' + urlErr.message);
-  }
-  const publicURL = urlData.publicUrl;
-
-  // 5) Actualiza la fila de producto con la URL
-  const { error: updErr } = await supabase
-    .from('products')
-    .update({ imageurl: publicURL })
-    .eq('id', productId);
-  if (updErr) {
-    console.error('UPDATE PRODUCT ERROR →', updErr);
-    return alert('Error actualizando producto: ' + updErr.message);
-  }
-
-  // 6) Refresca la lista de productos para que se vea al instante
-  await fetchProducts();
-  alert('Imagen subida correctamente.');
+    // Recarga productos (tu función existente)
+    await fetchProducts();
+    alert('Imagen subida correctamente.');
+  };
 };
-
 
   // Carga inicial de productos
   useEffect(() => { fetchProducts(); }, []);
@@ -210,7 +184,29 @@ const handleUploadImage = async (productId: string) => {
         Subir imagen
       </button>
     </div>
-    {/* ← FIN selector de imagen */}
+
+   {/* ← AÑADIR selector de imagen y botón de subida */}
+   <div className="mt-2 flex items-center">
+     <input
+       type="file"
+       accept="image/*"
+       onChange={e =>
+         setSelectedImage(prev => ({
+           ...prev,
+           [product.id]: e.target.files?.[0] || null
+         }))
+       }
+       className="block"
+     />
+     <button
+       onClick={() => handleUploadImage(product.id)}
+       className="ml-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+     >
+       Subir imagen
+     </button>
+   </div>
+   {/* ← FIN selector de imagen */}
+
   </li>
 ))}
 
