@@ -145,10 +145,8 @@ const handleUploadImage = async (productId: string) => {
          Crear Producto
        </button>
      </div>
-       <div className="bg-yellow-900/50 border border-yellow-600 text-yellow-200 p-4 mb-6 rounded-lg" role="alert">
-        <p className="font-bold">Funcionalidad en Desarrollo</p>
-        <p>La edición y creación de productos estará disponible en una futura actualización.</p>
-      </div>
+     
+
       <div className="bg-gray-800/50 backdrop-blur-sm border border-white/10 rounded-lg shadow">
          <ul className="divide-y divide-gray-700">
           
