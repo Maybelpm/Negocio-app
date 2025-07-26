@@ -38,7 +38,7 @@ const ProductsView: React.FC<ProductsViewProps> = ({ products, setProducts }) =>
         price: newProduct.price,
         stock: newProduct.stock,
         category: newProduct.category,
-        imageurl: '',
+        //imageurl: '',
       })
       .select()
       .single();
@@ -48,23 +48,6 @@ const ProductsView: React.FC<ProductsViewProps> = ({ products, setProducts }) =>
       return;
     }
 
-    // Si seleccionaron imagen, súbela y actualiza imageurl
-    if (newProduct.imageFile) {
-      const path = `${created.id}/${newProduct.imageFile.name}`;
-      const { error: upErr } = await supabase
-        .storage
-        .from('product-images')
-        .upload(path, newProduct.imageFile, { upsert: true });
-      if (upErr) { alert('Error subiendo imagen.'); return; }
-      const { publicURL } = supabase
-        .storage
-        .from('product-images')
-        .getPublicUrl(path);
-      await supabase
-        .from('products')
-        .update({ imageurl: publicURL })
-        .eq('id', created.id);
-    }
     // Refrescar listado y reset form
     await fetchProducts();
     setNewProduct({ name: '', description: '', price: 0, stock: 0, category: '', imageFile: null });
