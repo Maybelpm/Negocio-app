@@ -14,7 +14,9 @@ exports.handler = async function(event) {
     if (!productId || !fileName || !fileBase64) {
       return { statusCode: 400, body: 'Missing parameters' };
     }
-
+    console.log('→ service_role key present?', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log('→ VITE_SUPABASE_URL =', process.env.VITE_SUPABASE_URL);
+    console.log('→ upload path =', `${productId}/${fileName}`);
     // 2) Decode and prepare buffer
     const buffer = Buffer.from(fileBase64, 'base64');
     const path = `${productId}/${fileName}`;
