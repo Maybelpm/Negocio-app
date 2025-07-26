@@ -38,20 +38,48 @@ const ProductsView: React.FC<ProductsViewProps> = ({ products, setProducts }) =>
         price: newProduct.price,
         stock: newProduct.stock,
         category: newProduct.category,
-        //imageurl: '',
+        imageurl: '',
       })
       .select()
       .single();
     if (insErr || !created) {
-      console.error('CREATE PRODUCT ERROR →', insErr);      // ← añade esta línea
+      console.error('CREATE PRODUCT ERROR →', insErr); 
       alert('Error creando producto: ' + (insErr?.message || 'Unknown error'));
       return;
     }
+  // 2) Si el usuario subió imagen en el formulario, llámale a tu Function
+  if (newProduct.imageFile) {
+    // Prepara nombre seguro
+    const rawName = newProduct.imageFile.name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    const safeName = rawName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
 
-    // Refrescar listado y reset form
+    // Lee Base64
+    const reader = new FileReader();
+    reader.readAsDataURL(newProduct.imageFile);
+    reader.onloadend = async () => {
+      const base64 = (reader.result as string).split(',')[1];
+      // Invoca tu Function
+      const res = await fetch('/.netlify/functions/uploadImage', {
+        method: 'POST',
+        body: JSON.stringify({ productId: created.id, fileName: safeName, fileBase64: base64 }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        console.error('Fn upload error during create →', json.error);
+        return alert('Error subiendo imagen al crear producto: ' + json.error);
+      }
+      // Una vez subida, refresca lista y limpia formulario
+      await fetchProducts();
+      alert('Producto creado con imagen correctamente.');
+      setNewProduct({ name:'', description:'', price:0, stock:0, category:'', imageFile: null });
+    };
+  } else {
+    // 3) Si no había imagen, sólo refresca y limpia
     await fetchProducts();
-    setNewProduct({ name: '', description: '', price: 0, stock: 0, category: '', imageFile: null });
-  };
+    setNewProduct({ name:'', description:'', price:0, stock:0, category:'', imageFile: null });
+    alert('Producto creado correctamente.');
+  }
+};
 
   // Subir imagen para producto existente
 const handleUploadImage = async (productId: string) => {
