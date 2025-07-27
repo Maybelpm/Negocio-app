@@ -75,18 +75,19 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar este producto?')) return;
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id);
-    if (error) {
-      console.error('DELETE ERROR', error);
-      alert('Error eliminando producto');
-      return;
-    }
-    fetchProducts();
+  if (!confirm('¿Eliminar este producto?')) return;
+  const res = await fetch('/.netlify/functions/productCrud', {
+    method: 'DELETE',
+    body: JSON.stringify({ productId: id }),
+  });
+  if (!res.ok) {
+    const { error } = await res.json();
+    return alert('Error al eliminar: ' + error);
+  }
+  toast.success('Producto eliminado');
+  fetchProducts();
   };
+
 
   const handleUploadImage = async (productId: string) => {
     const file = selectedImage[productId];
