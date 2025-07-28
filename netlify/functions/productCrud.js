@@ -16,29 +16,30 @@ exports.handler = async (event) => {
         return { statusCode: 400, body: 'Missing productId' };
       }
 
-      // 1. Obtener el producto
-      const { data: product, error: fetchError } = await supabase
-        .from('products')
-        .select('image_url')
-        .eq('id', productId)
-        .single();
-
-      if (fetchError) throw fetchError;
+       // 1. Obtener el producto
+       const { data: product, error: fetchError } = await supabase
+         .from('products')
+         .select('imageurl')      // ← aquí el nombre real
+          .eq('id', productId)
+          .single();
 
       // 2. Extraer ruta de imagen (si existe)
-      const imagePath = product?.image_url?.split('/storage/v1/object/public/')[1];
+       const imagePath = product?.imageurl
+         ? product.imageurl.split(`/product-images/`)[1]
+         : null;
 
       // 3. Borrar imagen del bucket si hay ruta
-      if (imagePath) {
-        const { error: deleteImageError } = await supabase.storage
-          .from('product_images')
+       if (imagePath) {
+         const { error: deleteImageError } = await supabase.storage
+          .from('product-images') // ← usa el guión medio
           .remove([imagePath]);
 
-        if (deleteImageError) {
-          console.warn('Error deleting image:', deleteImageError.message);
-          // No cortamos el flujo por esto
-        }
+          if (deleteImageError) {
+            console.warn('Error deleting image:', deleteImageError.message);
+            // No cortamos el flujo por esto
+          }
       }
+
 
       // 4. Eliminar el producto de la tabla
       const { error: deleteProductError } = await supabase
