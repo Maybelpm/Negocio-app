@@ -111,8 +111,28 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
       alert('Imagen subida correctamente.');
     };
   };
-    const [isEditing, setIsEditing] = useState(false);
-    const [editProduct, setEditProduct] = useState<Product | null>(null);
+  // control del modal y producto a editar
+  const [isEditing, setIsEditing] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+
+  // función que guarda los cambios en Supabase
+  const handleSaveEdit = async () => {
+      if (!editProduct) return;
+      const { id, name, price, stock, description, category } = editProduct;
+      const { error } = await supabase
+        .from('products')
+        .update({ name, price, stock, description, category })
+        .eq('id', id);
+      if (error) {
+        console.error(error);
+        alert('Error guardando cambios');
+        return;
+      }
+      setIsEditing(false);
+      setEditProduct(null);
+      fetchProducts();
+      alert('Producto actualizado');
+  };
 
   return (
     <div className="space-y-6">
@@ -200,10 +220,54 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
         ))}
       </div>
       {isEditing && editProduct && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      {/* … contenido del modal … */}
-      </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-2xl w-full max-w-lg">
+            <h2 className="text-2xl font-bold text-white mb-4">
+              Editar {editProduct.name}
+            </h2>
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={editProduct.name}
+                onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
+                className="w-full p-3 rounded bg-gray-700 text-white"
+              />
+              <input
+                type="number"
+                value={editProduct.price}
+                onChange={e => setEditProduct({ ...editProduct, price: +e.target.value })}
+                className="w-full p-3 rounded bg-gray-700 text-white"
+              />
+              <input
+                type="number"
+                value={editProduct.stock}
+                onChange={e => setEditProduct({ ...editProduct, stock: +e.target.value })}
+                className="w-full p-3 rounded bg-gray-700 text-white"
+              />
+              <textarea
+                value={editProduct.description}
+                onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
+                className="w-full p-3 rounded bg-gray-700 text-white"
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-4">
+              <button
+                onClick={() => { setIsEditing(false); setEditProduct(null); }}
+                className="px-4 py-2 bg-gray-600 rounded text-white hover:bg-gray-500"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 bg-green-600 rounded text-white hover:bg-green-500"
+              >
+                Guardar cambios
+              </button>
+            </div>
+          </div>
+        </div>
       )}
+
 
     </div>
   );
