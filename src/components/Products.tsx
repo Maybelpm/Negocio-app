@@ -111,6 +111,8 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
       alert('Imagen subida correctamente.');
     };
   };
+    const [isEditing, setIsEditing] = useState(false);
+    const [editProduct, setEditProduct] = useState<Product | null>(null);
 
   return (
     <div className="space-y-6">
@@ -185,13 +187,24 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
                 className="px-4 py-2 bg-red-500 rounded-lg text-white hover:bg-red-400"
               >Eliminar</button>
               <button
-                onClick={() => {/* modal de edición */}}
-                className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-500"
-              >Editar</button>
+              onClick={() => {
+                setEditProduct(product);
+                setIsEditing(true);
+              }}
+              className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-500"
+              >
+              Editar
+              </button>
             </div>
           </div>
         ))}
       </div>
+      {isEditing && editProduct && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      {/* … contenido del modal … */}
+      </div>
+      )}
+
     </div>
   );
 };
