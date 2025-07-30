@@ -51,13 +51,39 @@ exports.handler = async (event) => {
 
       return { statusCode: 200, body: 'Deleted' };
     }
+      if (httpMethod === 'PUT') {
+      const { id, name, price, stock, description, category } = payload;
+      if (!id) return { statusCode: 400, body: 'Missing id' };
+
+      // 1) Actualiza la fila
+      const { error: updErr } = await supabase
+        .from('products')
+        .update({ name, price, stock, description, category })
+        .eq('id', id);
+      if (updErr) throw updErr;
+
+      // 2) Si viene editImageFileData, súbela (igual que en uploadImage)
+      if (payload.fileName && payload.fileBase64) {
+        const path = `${id}/${payload.fileName}`;
+        const buffer = Buffer.from(payload.fileBase64, 'base64');
+        await supabase.storage
+          .from('product-images')
+          .upload(path, buffer, { upsert: true });
+        const { data: urlData } = supabase
+          .storage.from('product-images')
+          .getPublicUrl(path);
+        await supabase
+          .from('products')
+          .update({ imageurl: urlData.publicUrl })
+          .eq('id', id);
+      }
+
+      return { statusCode: 200, body: JSON.stringify({ message: 'Updated' }) };
+      }
 
     return { statusCode: 405, body: 'Method Not Allowed' };
   } catch (err) {
-    console.error('productCrud error', err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
-    };
+    console.error(err);
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };

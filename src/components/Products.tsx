@@ -121,53 +121,46 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
   // función que guarda los cambios en Supabase
 const handleSaveEdit = async () => {
   if (!editProduct) return;
-  const { id, name, price, stock, description, category } = editProduct;
 
-  // 1) Actualizar campos de texto
-  const { error: updErr } = await supabase
-    .from('products')
-    .update({ name, price, stock, description, category })
-    .eq('id', id);
-  if (updErr) {
-    console.error(updErr);
-    alert('Error actualizando datos');
-    return;
-  }
+  // Construye el payload
+  const payload: any = {
+    id: editProduct.id,
+    name: editProduct.name,
+    price: editProduct.price,
+    stock: editProduct.stock,
+    description: editProduct.description,
+    category: editProduct.category,
+  };
 
-  // 2) Si hay imagen nueva, subirla
+  // Si hubo un fichero nuevo:
   if (editImageFile) {
-    // Sanitiza el nombre
     const rawName = editImageFile.name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
     const safeName = rawName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-
-    // Leer como Base64
-    const reader = new FileReader();
-    reader.readAsDataURL(editImageFile);
-    reader.onloadend = async () => {
-      const base64 = (reader.result as string).split(',')[1];
-      const res = await fetch('/.netlify/functions/uploadImage', {
-        method: 'POST',
-        body: JSON.stringify({ productId: id, fileName: safeName, fileBase64: base64 }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        console.error('Upload error', json.error);
-        alert('Error subiendo imagen');
-      }
-      // 3) Refrescar lista tras la subida
-      fetchProducts();
-    };
-  } else {
-    // Si no cambió la imagen, solo refresca
-    fetchProducts();
+    const base64 = await new Promise<string>(resolve => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+      reader.readAsDataURL(editImageFile);
+    });
+    payload.fileName = safeName;
+    payload.fileBase64 = base64;
   }
 
-  // 4) Cerrar modal y reset
+  // Llamada al backend
+  const res = await fetch('/.netlify/functions/productCrud', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const { error } = await res.json();
+    return alert('Error actualizando: ' + error);
+  }
   setIsEditing(false);
   setEditProduct(null);
   setEditImageFile(null);
+  fetchProducts();
   alert('Producto actualizado correctamente');
 };
+
 
 
   return (
