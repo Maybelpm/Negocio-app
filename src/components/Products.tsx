@@ -114,25 +114,61 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
   // control del modal y producto a editar
   const [isEditing, setIsEditing] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
+  //fichero de imagen que el usuario elija al editar
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+
 
   // función que guarda los cambios en Supabase
-  const handleSaveEdit = async () => {
-      if (!editProduct) return;
-      const { id, name, price, stock, description, category } = editProduct;
-      const { error } = await supabase
-        .from('products')
-        .update({ name, price, stock, description, category })
-        .eq('id', id);
-      if (error) {
-        console.error(error);
-        alert('Error guardando cambios');
-        return;
+const handleSaveEdit = async () => {
+  if (!editProduct) return;
+  const { id, name, price, stock, description, category } = editProduct;
+
+  // 1) Actualizar campos de texto
+  const { error: updErr } = await supabase
+    .from('products')
+    .update({ name, price, stock, description, category })
+    .eq('id', id);
+  if (updErr) {
+    console.error(updErr);
+    alert('Error actualizando datos');
+    return;
+  }
+
+  // 2) Si hay imagen nueva, subirla
+  if (editImageFile) {
+    // Sanitiza el nombre
+    const rawName = editImageFile.name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    const safeName = rawName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+
+    // Leer como Base64
+    const reader = new FileReader();
+    reader.readAsDataURL(editImageFile);
+    reader.onloadend = async () => {
+      const base64 = (reader.result as string).split(',')[1];
+      const res = await fetch('/.netlify/functions/uploadImage', {
+        method: 'POST',
+        body: JSON.stringify({ productId: id, fileName: safeName, fileBase64: base64 }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        console.error('Upload error', json.error);
+        alert('Error subiendo imagen');
       }
-      setIsEditing(false);
-      setEditProduct(null);
+      // 3) Refrescar lista tras la subida
       fetchProducts();
-      alert('Producto actualizado');
-  };
+    };
+  } else {
+    // Si no cambió la imagen, solo refresca
+    fetchProducts();
+  }
+
+  // 4) Cerrar modal y reset
+  setIsEditing(false);
+  setEditProduct(null);
+  setEditImageFile(null);
+  alert('Producto actualizado correctamente');
+};
+
 
   return (
     <div className="space-y-6">
@@ -225,6 +261,23 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
             <h2 className="text-2xl font-bold text-white mb-4">
               Editar {editProduct.name}
             </h2>
+            <div className="mt-4">
+              <label className="text-white mb-1 block">Cambiar imagen:</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={e => setEditImageFile(e.target.files?.[0] || null)}
+                className="w-full text-sm text-gray-300"
+              />
+              {editImageFile && (
+                <img
+                  src={URL.createObjectURL(editImageFile)}
+                  alt="Preview"
+                  className="mt-2 h-24 w-24 object-cover rounded-lg"
+                />
+              )} 
+            </div>
+
             <div className="space-y-4">
               <input
                 type="text"
