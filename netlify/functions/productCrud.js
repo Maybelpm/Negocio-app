@@ -9,6 +9,7 @@ const supabase = createClient(
 
 exports.handler = async (event) => {
   const { httpMethod, body } = event;
+  const payload = JSON.parse(body || '{}');
   try {
     if (httpMethod === 'DELETE') {
       const { productId } = JSON.parse(body);
@@ -52,8 +53,8 @@ exports.handler = async (event) => {
       return { statusCode: 200, body: 'Deleted' };
     }
       if (httpMethod === 'PUT') {
-      const { id, name, price, stock, description, category } = payload;
-      if (!id) return { statusCode: 400, body: 'Missing id' };
+      const { id, name, price, stock, description, category, fileName, fileBase64 } = payload;
+      if (!id) return { statusCode: 400, body: 'Missing product id' };
 
       // 1) Actualiza la fila
       const { error: updErr } = await supabase
@@ -62,28 +63,40 @@ exports.handler = async (event) => {
         .eq('id', id);
       if (updErr) throw updErr;
 
-      // 2) Si viene editImageFileData, súbela (igual que en uploadImage)
-      if (payload.fileName && payload.fileBase64) {
-        const path = `${id}/${payload.fileName}`;
-        const buffer = Buffer.from(payload.fileBase64, 'base64');
-        await supabase.storage
+      // 2) Si el cliente envió una imagen nueva, súbela
+      if (fileName && fileBase64) {
+        const buffer = Buffer.from(fileBase64, 'base64');
+        const path = `${id}/${fileName}`;
+        const { error: upErr } = await supabase
+          .storage
           .from('product-images')
-          .upload(path, buffer, { upsert: true });
-        const { data: urlData } = supabase
-          .storage.from('product-images')
+          .upload(path, buffer, { upsert: true, contentType: 'image/png' });
+        if (upErr) throw upErr;
+
+        // 3) Actualiza imageurl en la fila
+        const { data: urlData, error: urlErr } = supabase
+          .storage
+          .from('product-images')
           .getPublicUrl(path);
+        if (urlErr) throw urlErr;
         await supabase
           .from('products')
           .update({ imageurl: urlData.publicUrl })
           .eq('id', id);
       }
 
-      return { statusCode: 200, body: JSON.stringify({ message: 'Updated' }) };
-      }
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ message: 'Updated' }),
+      };
+    }
 
     return { statusCode: 405, body: 'Method Not Allowed' };
   } catch (err) {
-    console.error(err);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    console.error('productCrud error', err);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: err.message }),
+    };
   }
 };
