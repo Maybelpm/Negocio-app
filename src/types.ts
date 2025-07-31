@@ -15,15 +15,16 @@ export type Json =
   | Json[]
 
 export interface Product {
-  id: string; // UUID
+  id: string;
   name: string;
   description: string;
   price: number;
   stock: number;
-  category: ProductCategory | string;
-  imageUrl?: string;
-  created_at: string;
+  category: string;
+  imageurl: string;   // columna original
+  imageUrl: string;   // alias uniforme para consumir en React
 }
+
 
 export interface CartItem extends Product {
   quantity: number;

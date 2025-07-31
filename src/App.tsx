@@ -40,8 +40,17 @@ const App: React.FC = () => {
       if (productsError) throw productsError;
       if (salesError) throw salesError;
 
-      setProducts(productsData || []);
-      setSales(salesData as Sale[] || []);
+    // Normalizo productsData para añadir imageUrl (camelCase)
+    // y así unificar consumo en todas las vistas
+    const normalizedProducts = (productsData || []).map(p => ({
+      ...p,
+      imageUrl: p.imageurl,      // tu columna real -> alias camelCase
+    }));
+
+    setProducts(normalizedProducts as Product[]);
+    setSales(salesData as Sale[] || []);
+
+
     } catch (err: any) {
       console.error('Error fetching data:', err);
       setError('No se pudieron cargar los datos. Verifique la conexión y la configuración de Supabase.');

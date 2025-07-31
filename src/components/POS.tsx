@@ -85,7 +85,16 @@ const POSView: React.FC<POSViewProps> = ({ products, onSale }) => {
               disabled={product.stock <= 0}
               className="bg-gray-700 rounded-lg p-3 flex flex-col items-center justify-between cursor-pointer hover:bg-gray-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <img src={product.imageUrl || `https://picsum.photos/seed/${product.id}/200`} alt={product.name} className="h-24 w-24 object-cover rounded-md mb-2" />
+        <img
+          src={
+            product.imageUrl /* normalizado en App.tsx */
+            || product.imageurl /* tu columna original, en caso de no normalizar */
+            || `https://picsum.photos/seed/${product.id}/50`
+          }
+          alt={product.name}
+          className="h-12 w-12 object-cover rounded-md"
+        />
+
               <p className="text-white font-semibold text-center text-sm flex-grow">{product.name}</p>
               <div className="w-full mt-2">
                 <p className="text-green-400 font-bold">${product.price.toFixed(2)}</p>
