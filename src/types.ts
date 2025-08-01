@@ -19,7 +19,10 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  sale_price: number;     // precio de venta en BD
+  cost_price: number;     // precio de compra en BD
   stock: number;
+  stock_minimum: number;  // umbral de alerta
   category: string;
   imageurl: string;   // columna original
   imageUrl: string;   // alias uniforme para consumir en React
