@@ -9,13 +9,16 @@ interface ProductsProps {
 
 const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
   const [newProduct, setNewProduct] = useState({
-    name: '',
-    description: '',
-    price: 0,
-    stock: 0,
-    category: '',
-    imageFile: null as File | null,
+  name: '',
+  description: '',
+  price: 0,
+  cost_price: 0,
+  stock: 0,
+  stock_minimum: 0,
+  category: '',
+  imageFile: null as File | null,
   });
+
   const [selectedImage, setSelectedImage] = useState<{ [id: string]: File | null }>({});
 
   const fetchProducts = async () => {
@@ -39,12 +42,15 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
         name: newProduct.name,
         description: newProduct.description,
         price: newProduct.price,
+        cost_price: newProduct.cost_price,
         stock: newProduct.stock,
+        stock_minimum: newProduct.stock_minimum,
         category: newProduct.category,
         imageurl: ''
       })
       .select()
       .single();
+
     if (insErr || !created) {
       console.error('CREATE ERROR', insErr);
       alert('Error creando producto');
@@ -196,6 +202,21 @@ const handleSaveEdit = async () => {
             onChange={e => setNewProduct({ ...newProduct, stock: +e.target.value })}
             className="p-3 rounded-lg bg-gray-700 text-white"
           />
+          <input
+            type="number"
+            placeholder="Precio de costo"
+            value={newProduct.cost_price}
+            onChange={e => setNewProduct({ ...newProduct, cost_price: +e.target.value })}
+            className="p-3 rounded-lg bg-gray-700 text-white"
+          />
+          <input
+            type="number"
+            placeholder="Stock mínimo"
+            value={newProduct.stock_minimum}
+            onChange={e => setNewProduct({ ...newProduct, stock_minimum: +e.target.value })}
+            className="p-3 rounded-lg bg-gray-700 text-white"
+          />
+
           <textarea
             placeholder="Descripción"
             value={newProduct.description}
