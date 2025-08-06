@@ -134,6 +134,8 @@ const handleSaveEdit = async () => {
     name: editProduct.name,
     price: editProduct.price,
     stock: editProduct.stock,
+    cost_price: editProduct.cost_price,
+    stock_minimum: editProduct.stock_minimum,
     description: editProduct.description,
     category: editProduct.category,
   };
@@ -309,6 +311,20 @@ const handleSaveEdit = async () => {
                 type="number"
                 value={editProduct.stock}
                 onChange={e => setEditProduct({ ...editProduct, stock: +e.target.value })}
+                className="w-full p-3 rounded bg-gray-700 text-white"
+              />
+              <input
+                type="number"
+                placeholder="Precio de costo"
+                value={editProduct.cost_price}
+                onChange={e => setEditProduct({ ...editProduct, cost_price: +e.target.value })}
+                className="w-full p-3 rounded bg-gray-700 text-white"
+              />
+              <input
+                type="number"
+                placeholder="Stock mínimo"
+                value={editProduct.stock_minimum}
+                onChange={e => setEditProduct({ ...editProduct, stock_minimum: +e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
               <textarea
