@@ -40,11 +40,16 @@ const App: React.FC = () => {
       if (productsError) throw productsError;
       if (salesError) throw salesError;
 
-    // Normalizo productsData para añadir imageUrl (camelCase)
-    // y así unificar consumo en todas las vistas
-    const normalizedProducts = (productsData || []).map(p => ({
+    // Normaliza productos: garantiza que el front use `price`, `imageUrl`, etc.
+    const normalizedProducts = (productsData || []).map((p: any) => ({
       ...p,
-      imageUrl: p.imageurl,      // tu columna real -> alias camelCase
+      // price en front será el sale_price de la BD (fallbacks por seguridad)
+      price: Number(p.sale_price ?? p.price ?? 0),
+      cost_price: Number(p.cost_price ?? 0),
+      stock_minimum: Number(p.stock_minimum ?? 0),
+      // imagen: mantener ambos nombres por compatibilidad
+      imageurl: p.imageurl ?? p.image_url ?? p.imageUrl ?? '',
+      imageUrl: p.imageurl ?? p.image_url ?? p.imageUrl ?? '',
     }));
 
     setProducts(normalizedProducts as Product[]);
