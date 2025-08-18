@@ -52,51 +52,48 @@ exports.handler = async (event) => {
 
       return { statusCode: 200, body: 'Deleted' };
     }
-      if (httpMethod === 'PUT') {
-      const { id, name, price, stock, description, category, fileName, fileBase64 } = payload;
-      if (!id) return { statusCode: 400, body: 'Missing product id' };
+    
+// dentro de productCrud.js, en el branch httpMethod === 'PUT'
+if (httpMethod === 'PUT') {
+  const payload = JSON.parse(body);
+  const { id, name, sale_price, price, stock, description, category, cost_price, stock_minimum, fileName, fileBase64 } = payload;
 
-      // 1) Actualiza la fila
-      const { error: updErr } = await supabase
-        .from('products')
-        .update({ name, price, stock, description, category })
-        .eq('id', id);
-      if (updErr) throw updErr;
-
-      // 2) Si el cliente envió una imagen nueva, súbela
-      if (fileName && fileBase64) {
-        const buffer = Buffer.from(fileBase64, 'base64');
-        const path = `${id}/${fileName}`;
-        const { error: upErr } = await supabase
-          .storage
-          .from('product-images')
-          .upload(path, buffer, { upsert: true, contentType: 'image/png' });
-        if (upErr) throw upErr;
-
-        // 3) Actualiza imageurl en la fila
-        const { data: urlData, error: urlErr } = supabase
-          .storage
-          .from('product-images')
-          .getPublicUrl(path);
-        if (urlErr) throw urlErr;
-        await supabase
-          .from('products')
-          .update({ imageurl: urlData.publicUrl })
-          .eq('id', id);
-      }
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: 'Updated' }),
-      };
+  try {
+    let publicURL = null;
+    if (fileBase64 && fileName) {
+      const buffer = Buffer.from(fileBase64, 'base64');
+      const path = `${id}/${fileName}`;
+      const { error: upErr } = await supabase.storage.from('product-images').upload(path, buffer, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
+      publicURL = urlData.publicUrl;
     }
 
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  } catch (err) {
-    console.error('productCrud error', err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
+    const baseUpdate = {
+      name,
+      stock,
+      description,
+      category,
+      cost_price,
+      stock_minimum
     };
+    if (publicURL) baseUpdate.imageurl = publicURL;
+
+    // preferimos sale_price (schema actual), pero si el cliente envía price lo usamos también
+    if (typeof sale_price !== 'undefined' || typeof price !== 'undefined') {
+      const priceToUse = typeof sale_price !== 'undefined' ? sale_price : price;
+      const updateObj = { ...baseUpdate, sale_price: priceToUse };
+      const { error: updErr } = await supabase.from('products').update(updateObj).eq('id', id);
+      if (updErr) throw updErr;
+      return { statusCode: 200, body: 'OK' };
+    }
+
+    // si no hay price en payload, actualizamos solo lo demás
+    const { error: finalErr } = await supabase.from('products').update(baseUpdate).eq('id', id);
+    if (finalErr) throw finalErr;
+    return { statusCode: 200, body: 'OK' };
+  } catch (err) {
+    console.error('productCrud PUT error', err);
+    return { statusCode: 500, body: JSON.stringify({ error: err.message || String(err) }) };
   }
-};
+}
