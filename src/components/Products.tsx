@@ -20,16 +20,47 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
   });
 
   const [selectedImage, setSelectedImage] = useState<{ [id: string]: File | null }>({});
+  const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('name', { ascending: true });
-    if (!error && data) setProducts(data);
+    setLoadingProducts(true);
+    setProductsError(null);
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) {
+        // Supabase returned an error object
+        console.error('fetchProducts supabase error:', error);
+        setProductsError(error.message || 'Error cargando productos (supabase)');
+        return;
+      }
+      if (!data) {
+        setProducts([]);
+        return;
+      }
+      setProducts(data);
+    } catch (err: any) {
+      console.error('fetchProducts unexpected error:', err);
+      setProductsError(err?.message || String(err));
+    } finally {
+      setLoadingProducts(false);
+    }
   };
 
-  useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => {
+    // protección: solo intentar si supabase está definido
+    if (!supabase) {
+      setProductsError('Supabase client no inicializado');
+      setLoadingProducts(false);
+      return;
+    }
+    // llama la función de forma segura
+    fetchProducts();
+  }, []);
 
   const handleCreateProduct = async () => {
     if (!newProduct.name || newProduct.price <= 0 || newProduct.stock < 0) {
@@ -77,7 +108,7 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
     } else {
       fetchProducts();
     }
-    setNewProduct({ name: '', description: '', price: 0, stock: 0, category: '', imageFile: null });
+    setNewProduct({ name: '', description: '', price: 0, cost_price: 0, stock: 0, stock_minimum: 0, category: '', imageFile: null });
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -169,8 +200,33 @@ const handleSaveEdit = async () => {
   alert('Producto actualizado correctamente');
 };
 
+  // ---------------------- REEMPLAZA AQUI EL RETURN ACTUAL ----------------------
+  // Muestra estado de carga o error antes de renderizar la grilla
+  if (loadingProducts) {
+    return (
+      <div className="p-6">
+        <p className="text-white">Cargando productos…</p>
+      </div>
+    );
+  }
 
+  if (productsError) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-700 text-white p-4 rounded">
+          {productsError}
+        </div>
+        <button
+          className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+          onClick={fetchProducts}
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
 
+  // Si ya cargaron y no hay error, renderizamos la UI normal
   return (
     <div className="space-y-6">
       <div className="bg-gray-800/50 p-6 rounded-2xl shadow-lg">
@@ -239,6 +295,7 @@ const handleSaveEdit = async () => {
           </div>
         </div>
       </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map(product => (
           <div key={product.id} className="bg-gray-800/50 p-4 rounded-2xl shadow flex flex-col justify-between">
@@ -250,8 +307,11 @@ const handleSaveEdit = async () => {
               />
               <h3 className="text-xl font-bold text-white">{product.name}</h3>
               <p className="text-gray-400 text-sm mb-2">{product.category}</p>
-              <p className="text-white mb-1">Precio: ${product.price.toFixed(2)}</p>
-              <p className="text-white">Stock: {product.stock}</p>
+              {/* uso seguro de price: comprueba null/undefined antes de toFixed */}
+              <p className="text-white mb-1">
+                Precio: ${product.price != null ? Number(product.price).toFixed(2) : '—'}
+              </p>
+              <p className="text-white">Stock: {product.stock ?? 0}</p>
             </div>
             <div className="mt-4 flex justify-between">
               <button
@@ -259,24 +319,23 @@ const handleSaveEdit = async () => {
                 className="px-4 py-2 bg-red-500 rounded-lg text-white hover:bg-red-400"
               >Eliminar</button>
               <button
-              onClick={() => {
-                setEditProduct(product);
-                setIsEditing(true);
-              }}
-              className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-500"
+                onClick={() => {
+                  setEditProduct(product);
+                  setIsEditing(true);
+                }}
+                className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-500"
               >
-              Editar
+                Editar
               </button>
             </div>
           </div>
         ))}
       </div>
+
       {isEditing && editProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-gray-800 p-6 rounded-2xl w-full max-w-lg">
-            <h2 className="text-2xl font-bold text-white mb-4">
-              Editar {editProduct.name}
-            </h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Editar {editProduct.name}</h2>
             <div className="mt-4">
               <label className="text-white mb-1 block">Cambiar imagen:</label>
               <input
@@ -291,7 +350,7 @@ const handleSaveEdit = async () => {
                   alt="Preview"
                   className="mt-2 h-24 w-24 object-cover rounded-lg"
                 />
-              )} 
+              )}
             </div>
 
             <div className="space-y-4">
@@ -303,32 +362,32 @@ const handleSaveEdit = async () => {
               />
               <input
                 type="number"
-                value={editProduct.price}
+                value={editProduct.price ?? 0}
                 onChange={e => setEditProduct({ ...editProduct, price: +e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
               <input
                 type="number"
-                value={editProduct.stock}
+                value={editProduct.stock ?? 0}
                 onChange={e => setEditProduct({ ...editProduct, stock: +e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
               <input
                 type="number"
                 placeholder="Precio de costo"
-                value={editProduct.cost_price}
+                value={editProduct.cost_price ?? 0}
                 onChange={e => setEditProduct({ ...editProduct, cost_price: +e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
               <input
                 type="number"
                 placeholder="Stock mínimo"
-                value={editProduct.stock_minimum}
+                value={editProduct.stock_minimum ?? 0}
                 onChange={e => setEditProduct({ ...editProduct, stock_minimum: +e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
               <textarea
-                value={editProduct.description}
+                value={editProduct.description || ''}
                 onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
@@ -350,10 +409,9 @@ const handleSaveEdit = async () => {
           </div>
         </div>
       )}
-
-
     </div>
-  );
+  // ---------------------- FIN DEL NUEVO RETURN ----------------------
+  );  
 };
 
 export default Products;
