@@ -9,38 +9,42 @@ const supabase = createClient(
 
 exports.handler = async (event) => {
   const { httpMethod, body } = event;
-  const payload = JSON.parse(body || '{}');
+
   try {
+    // ---------------- DELETE ----------------
     if (httpMethod === 'DELETE') {
-      const { productId } = JSON.parse(body);
+      const { productId } = JSON.parse(body || '{}');
       if (!productId) {
         return { statusCode: 400, body: 'Missing productId' };
       }
 
-       // 1. Obtener el producto
-       const { data: product, error: fetchError } = await supabase
-         .from('products')
-         .select('imageurl')      // ← aquí el nombre real
-          .eq('id', productId)
-          .single();
+      // 1. Obtener el producto
+      const { data: product, error: fetchError } = await supabase
+        .from('products')
+        .select('imageurl')
+        .eq('id', productId)
+        .single();
 
-      // 2. Extraer ruta de imagen (si existe)
-       const imagePath = product?.imageurl
-         ? product.imageurl.split(`/product-images/`)[1]
-         : null;
-
-      // 3. Borrar imagen del bucket si hay ruta
-       if (imagePath) {
-         const { error: deleteImageError } = await supabase.storage
-          .from('product-images') // ← usa el guión medio
-          .remove([imagePath]);
-
-          if (deleteImageError) {
-            console.warn('Error deleting image:', deleteImageError.message);
-            // No cortamos el flujo por esto
-          }
+      if (fetchError) {
+        return { statusCode: 500, body: JSON.stringify({ error: fetchError.message }) };
       }
 
+      // 2. Extraer ruta de imagen (si existe)
+      const imagePath = product?.imageurl
+        ? product.imageurl.split(`/product-images/`)[1]
+        : null;
+
+      // 3. Borrar imagen del bucket si hay ruta
+      if (imagePath) {
+        const { error: deleteImageError } = await supabase.storage
+          .from('product-images')
+          .remove([imagePath]);
+
+        if (deleteImageError) {
+          console.warn('Error deleting image:', deleteImageError.message);
+          // no cortamos el flujo si falla
+        }
+      }
 
       // 4. Eliminar el producto de la tabla
       const { error: deleteProductError } = await supabase
@@ -52,48 +56,96 @@ exports.handler = async (event) => {
 
       return { statusCode: 200, body: 'Deleted' };
     }
-    
-// dentro de productCrud.js, en el branch httpMethod === 'PUT'
-if (httpMethod === 'PUT') {
-  const payload = JSON.parse(body);
-  const { id, name, sale_price, price, stock, description, category, cost_price, stock_minimum, fileName, fileBase64 } = payload;
 
-  try {
-    let publicURL = null;
-    if (fileBase64 && fileName) {
-      const buffer = Buffer.from(fileBase64, 'base64');
-      const path = `${id}/${fileName}`;
-      const { error: upErr } = await supabase.storage.from('product-images').upload(path, buffer, { upsert: true });
-      if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(path);
-      publicURL = urlData.publicUrl;
+    // ---------------- PUT ----------------
+    if (httpMethod === 'PUT') {
+      const payload = JSON.parse(body || '{}');
+      const {
+        id,
+        name,
+        sale_price,
+        price,
+        stock,
+        description,
+        category,
+        cost_price,
+        stock_minimum,
+        fileName,
+        fileBase64
+      } = payload;
+
+      try {
+        let publicURL = null;
+
+        // Subir imagen si viene en el payload
+        if (fileBase64 && fileName) {
+          const buffer = Buffer.from(fileBase64, 'base64');
+          const path = `${id}/${fileName}`;
+
+          const { error: upErr } = await supabase
+            .storage
+            .from('product-images')
+            .upload(path, buffer, { upsert: true });
+
+          if (upErr) throw upErr;
+
+          const { data: urlData } = supabase
+            .storage
+            .from('product-images')
+            .getPublicUrl(path);
+
+          publicURL = urlData.publicUrl;
+        }
+
+        // Construir objeto base
+        const baseUpdate = {
+          name,
+          stock,
+          description,
+          category,
+          cost_price,
+          stock_minimum
+        };
+        if (publicURL) baseUpdate.imageurl = publicURL;
+
+        // Preferimos sale_price (schema actual), pero si viene price también lo aceptamos
+        if (typeof sale_price !== 'undefined' || typeof price !== 'undefined') {
+          const priceToUse = typeof sale_price !== 'undefined' ? sale_price : price;
+          const updateObj = { ...baseUpdate, sale_price: priceToUse };
+
+          const { error: updErr } = await supabase
+            .from('products')
+            .update(updateObj)
+            .eq('id', id);
+
+          if (updErr) throw updErr;
+          return { statusCode: 200, body: 'OK' };
+        }
+
+        // Si no hay price en payload, actualizamos solo lo demás
+        const { error: finalErr } = await supabase
+          .from('products')
+          .update(baseUpdate)
+          .eq('id', id);
+
+        if (finalErr) throw finalErr;
+        return { statusCode: 200, body: 'OK' };
+      } catch (err) {
+        console.error('productCrud PUT error', err);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: err.message || String(err) })
+        };
+      }
     }
 
-    const baseUpdate = {
-      name,
-      stock,
-      description,
-      category,
-      cost_price,
-      stock_minimum
-    };
-    if (publicURL) baseUpdate.imageurl = publicURL;
-
-    // preferimos sale_price (schema actual), pero si el cliente envía price lo usamos también
-    if (typeof sale_price !== 'undefined' || typeof price !== 'undefined') {
-      const priceToUse = typeof sale_price !== 'undefined' ? sale_price : price;
-      const updateObj = { ...baseUpdate, sale_price: priceToUse };
-      const { error: updErr } = await supabase.from('products').update(updateObj).eq('id', id);
-      if (updErr) throw updErr;
-      return { statusCode: 200, body: 'OK' };
-    }
-
-    // si no hay price en payload, actualizamos solo lo demás
-    const { error: finalErr } = await supabase.from('products').update(baseUpdate).eq('id', id);
-    if (finalErr) throw finalErr;
-    return { statusCode: 200, body: 'OK' };
+    // ---------------- DEFAULT ----------------
+    return { statusCode: 405, body: 'Method Not Allowed' };
   } catch (err) {
-    console.error('productCrud PUT error', err);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message || String(err) }) };
+    console.error('productCrud error', err);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: err.message || String(err) })
+    };
   }
-}
+};
