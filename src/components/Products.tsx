@@ -354,24 +354,36 @@ const handleSaveEdit = async () => {
             </div>
 
             <div className="space-y-4">
+              <div>
+              <label className="block text-sm font-medium">Nombre</label>
               <input
                 type="text"
                 value={editProduct.name}
                 onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
+              </div>
+
+              <div>
+              <label className="block text-sm font-medium">Precio de venta</label>
               <input
                 type="number"
                 value={editProduct.price ?? 0}
                 onChange={e => setEditProduct({ ...editProduct, price: +e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
+              </div>
+              <div>
+              <label className="block text-sm font-medium">Stock actual</label>
               <input
                 type="number"
                 value={editProduct.stock ?? 0}
                 onChange={e => setEditProduct({ ...editProduct, stock: +e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
+              </div>
+              <div>
+              <label className="block text-sm font-medium">Precio de costo</label>
               <input
                 type="number"
                 placeholder="Precio de costo"
@@ -379,6 +391,9 @@ const handleSaveEdit = async () => {
                 onChange={e => setEditProduct({ ...editProduct, cost_price: +e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
+              </div>
+                <div>
+              <label className="block text-sm font-medium">Stock mínimo</label>
               <input
                 type="number"
                 placeholder="Stock mínimo"
@@ -386,6 +401,7 @@ const handleSaveEdit = async () => {
                 onChange={e => setEditProduct({ ...editProduct, stock_minimum: +e.target.value })}
                 className="w-full p-3 rounded bg-gray-700 text-white"
               />
+              </div>
               <textarea
                 value={editProduct.description || ''}
                 onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
