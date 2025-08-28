@@ -333,82 +333,103 @@ const handleSaveEdit = async () => {
       </div>
 
       {isEditing && editProduct && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-6 rounded-2xl w-full max-w-lg">
-            <h2 className="text-2xl font-bold text-white mb-4">Editar {editProduct.name}</h2>
-            <div className="mt-4">
-              <label className="text-white mb-1 block">Cambiar imagen:</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={e => setEditImageFile(e.target.files?.[0] || null)}
-                className="w-full text-sm text-gray-300"
-              />
-              {editImageFile && (
-                <img
-                  src={URL.createObjectURL(editImageFile)}
-                  alt="Preview"
-                  className="mt-2 h-24 w-24 object-cover rounded-lg"
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          aria-modal="true"
+          role="dialog"
+          onClick={() => { /* click en el backdrop cierra modal */ setIsEditing(false); setEditProduct(null); }}
+        >
+          {/* Contenedor interior: evitamos que el click en el panel cierre el modal */}
+          <div
+            className="w-full max-w-lg bg-gray-800 rounded-2xl shadow-lg overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxHeight: '90vh' }}
+          >
+            {/* Contenido scrollable */}
+            <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 88px)' }}>
+              <h2 className="text-2xl font-bold text-white mb-4">Editar {editProduct.name}</h2>
+
+              <div className="mt-4">
+                <label className="text-white mb-1 block">Cambiar imagen:</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => setEditImageFile(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-gray-300"
                 />
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <div>
-              <label className="block text-sm font-medium">Nombre</label>
-              <input
-                type="text"
-                value={editProduct.name}
-                onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
-                className="w-full p-3 rounded bg-gray-700 text-white"
-              />
+                {editImageFile && (
+                  <img
+                    src={URL.createObjectURL(editImageFile)}
+                    alt="Preview"
+                    className="mt-2 h-24 w-24 object-cover rounded-lg"
+                  />
+                )}
               </div>
 
-              <div>
-              <label className="block text-sm font-medium">Precio de venta</label>
-              <input
-                type="number"
-                value={editProduct.price ?? 0}
-                onChange={e => setEditProduct({ ...editProduct, price: +e.target.value })}
-                className="w-full p-3 rounded bg-gray-700 text-white"
-              />
-              </div>
-              <div>
-              <label className="block text-sm font-medium">Stock actual</label>
-              <input
-                type="number"
-                value={editProduct.stock ?? 0}
-                onChange={e => setEditProduct({ ...editProduct, stock: +e.target.value })}
-                className="w-full p-3 rounded bg-gray-700 text-white"
-              />
-              </div>
-              <div>
-              <label className="block text-sm font-medium">Precio de costo</label>
-              <input
-                type="number"
-                placeholder="Precio de costo"
-                value={editProduct.cost_price ?? 0}
-                onChange={e => setEditProduct({ ...editProduct, cost_price: +e.target.value })}
-                className="w-full p-3 rounded bg-gray-700 text-white"
-              />
-              </div>
+              <div className="space-y-4 mt-4">
                 <div>
-              <label className="block text-sm font-medium">Stock mínimo</label>
-              <input
-                type="number"
-                placeholder="Stock mínimo"
-                value={editProduct.stock_minimum ?? 0}
-                onChange={e => setEditProduct({ ...editProduct, stock_minimum: +e.target.value })}
-                className="w-full p-3 rounded bg-gray-700 text-white"
-              />
+                  <label className="block text-sm font-medium text-gray-300">Nombre</label>
+                  <input
+                    type="text"
+                    value={editProduct.name}
+                    onChange={e => setEditProduct({ ...editProduct, name: e.target.value })}
+                    className="w-full p-3 rounded bg-gray-700 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Precio de venta</label>
+                  <input
+                    type="number"
+                    value={editProduct.sale_price ?? editProduct.price ?? 0}
+                    onChange={e => setEditProduct({ ...editProduct, sale_price: +e.target.value })}
+                    className="w-full p-3 rounded bg-gray-700 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Precio de costo</label>
+                  <input
+                    type="number"
+                    value={editProduct.cost_price ?? 0}
+                    onChange={e => setEditProduct({ ...editProduct, cost_price: +e.target.value })}
+                    className="w-full p-3 rounded bg-gray-700 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Stock actual</label>
+                  <input
+                    type="number"
+                    value={editProduct.stock ?? 0}
+                    onChange={e => setEditProduct({ ...editProduct, stock: +e.target.value })}
+                    className="w-full p-3 rounded bg-gray-700 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Stock mínimo</label>
+                  <input
+                    type="number"
+                    value={editProduct.stock_minimum ?? 0}
+                    onChange={e => setEditProduct({ ...editProduct, stock_minimum: +e.target.value })}
+                    className="w-full p-3 rounded bg-gray-700 text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300">Descripción</label>
+                  <textarea
+                    value={editProduct.description || ''}
+                    onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
+                    className="w-full p-3 rounded bg-gray-700 text-white"
+                  />
+                </div>
               </div>
-              <textarea
-                value={editProduct.description || ''}
-                onChange={e => setEditProduct({ ...editProduct, description: e.target.value })}
-                className="w-full p-3 rounded bg-gray-700 text-white"
-              />
             </div>
-            <div className="mt-6 flex justify-end gap-4">
+
+            {/* Footer fijo dentro del modal (siempre visible) */}
+            <div className="border-t border-gray-700 p-4 bg-gray-800/90 flex justify-end gap-4">
               <button
                 onClick={() => { setIsEditing(false); setEditProduct(null); }}
                 className="px-4 py-2 bg-gray-600 rounded text-white hover:bg-gray-500"
@@ -425,6 +446,7 @@ const handleSaveEdit = async () => {
           </div>
         </div>
       )}
+
     </div>
   // ---------------------- FIN DEL NUEVO RETURN ----------------------
   );  
