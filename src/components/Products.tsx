@@ -224,6 +224,12 @@ const handleSaveEdit = async () => {
         </button>
       </div>
     );
+
+    // temporal: debug en consola
+    useEffect(() => {
+      console.log('Products (from props):', products);
+    }, [products]);
+
   }
 
   // Si ya cargaron y no hay error, renderizamos la UI normal
