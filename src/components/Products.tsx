@@ -225,11 +225,26 @@ const handleSaveEdit = async () => {
       </div>
     );
   }
-    // temporal: debug en consola
-    useEffect(() => {
-      console.log('Products (from props):', products);
-    }, [products]);
+  
+useEffect(() => {
+  console.log("Products (from props):", products);
+}, [products]);
 
+if (productsError) {
+  return (
+    <div className="p-6">
+      <div className="bg-red-700 text-white p-4 rounded">
+        {productsError}
+      </div>
+      <button
+        className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded"
+        onClick={fetchProducts}
+      >
+        Reintentar
+      </button>
+    </div>
+  );
+}
   // Si ya cargaron y no hay error, renderizamos la UI normal
   return (
     <div className="space-y-6">
