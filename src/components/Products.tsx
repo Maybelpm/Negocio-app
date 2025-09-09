@@ -56,7 +56,6 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
       // Normaliza para front: aseguramos price, sale_price, cost_price, imageurl
       const normalized = data.map((p: any) => ({
         ...p,
-        // si la BD usa sale_price, lo usamos; si antiguamente usabas price, lo respetamos
         sale_price: typeof p.sale_price !== 'undefined' ? p.sale_price : p.price ?? 0,
         price: typeof p.sale_price !== 'undefined' ? p.sale_price : p.price ?? 0,
         cost_price: p.cost_price ?? 0,
@@ -83,8 +82,14 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
   }, []);
 
   const handleCreateProduct = async () => {
-    if (!newProduct.name || newProduct.sale_price <= 0 || newProduct.stock < 0) {
-      return alert('Nombre, precio de venta y stock son obligatorios y deben ser válidos');
+    // coerción segura de campos numéricos
+    const sale_price = Number(newProduct.sale_price) || 0;
+    const cost_price = Number(newProduct.cost_price) || 0;
+    const stock = Number(newProduct.stock) || 0;
+    const stock_minimum = Number(newProduct.stock_minimum) || 0;
+
+    if (!newProduct.name || sale_price <= 0 || stock < 0) {
+      return alert('Nombre, precio de venta (>0) y stock (>=0) son obligatorios y deben ser válidos');
     }
 
     const { data: created, error: insErr } = await supabase
@@ -92,10 +97,10 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
       .insert({
         name: newProduct.name,
         description: newProduct.description,
-        sale_price: newProduct.sale_price,
-        cost_price: newProduct.cost_price,
-        stock: newProduct.stock,
-        stock_minimum: newProduct.stock_minimum,
+        sale_price,
+        cost_price,
+        stock,
+        stock_minimum,
         category: newProduct.category,
         imageurl: ''
       })
@@ -253,15 +258,115 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
       <div className="bg-gray-800/50 p-6 rounded-2xl shadow-lg">
         <h2 className="text-2xl font-bold text-white mb-4">Crear Nuevo Producto</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input type="text" placeholder="Nombre" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} className="p-3 rounded-lg bg-gray-700 text-white" />
-          <input type="text" placeholder="Categoría" value={newProduct.category} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })} className="p-3 rounded-lg bg-gray-700 text-white" />
-          <input type="number" placeholder="Precio de venta" value={newProduct.sale_price} onChange={e => setNewProduct({ ...newProduct, sale_price: +e.target.value })} className="p-3 rounded-lg bg-gray-700 text-white" />
-          <input type="number" placeholder="Stock" value={newProduct.stock} onChange={e => setNewProduct({ ...newProduct, stock: +e.target.value })} className="p-3 rounded-lg bg-gray-700 text-white" />
-          <input type="number" placeholder="Precio de costo" value={newProduct.cost_price} onChange={e => setNewProduct({ ...newProduct, cost_price: +e.target.value })} className="p-3 rounded-lg bg-gray-700 text-white" />
-          <input type="number" placeholder="Stock mínimo" value={newProduct.stock_minimum} onChange={e => setNewProduct({ ...newProduct, stock_minimum: +e.target.value })} className="p-3 rounded-lg bg-gray-700 text-white" />
-          <textarea placeholder="Descripción" value={newProduct.description} onChange={e => setNewProduct({ ...newProduct, description: e.target.value })} className="p-3 rounded-lg bg-gray-700 text-white md:col-span-2" />
+          {/* Nombre */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Nombre</label>
+            <input
+              type="text"
+              placeholder="Ej: Solomillo de cerdo"
+              value={newProduct.name}
+              onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+              className="p-3 rounded-lg bg-gray-700 text-white w-full"
+              aria-label="Nombre del producto"
+              required
+            />
+          </div>
+
+          {/* Categoría */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Categoría</label>
+            <input
+              type="text"
+              placeholder="Ej: Carnes"
+              value={newProduct.category}
+              onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
+              className="p-3 rounded-lg bg-gray-700 text-white w-full"
+              aria-label="Categoría del producto"
+            />
+          </div>
+
+          {/* Precio de venta */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Precio de venta</label>
+            <div className="mt-1 flex">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Ej: 1400.00"
+                value={newProduct.sale_price}
+                onChange={e => setNewProduct({ ...newProduct, sale_price: +e.target.value })}
+                className="p-3 rounded-l-lg bg-gray-700 text-white w-full"
+                aria-label="Precio de venta en CUP"
+                required
+              />
+              <span className="p-3 rounded-r-lg bg-gray-600 text-white inline-flex items-center">CUP</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Precio al cliente por unidad (libra, paquete, etc.).</p>
+          </div>
+
+          {/* Stock actual */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Stock actual</label>
+            <div className="mt-1 flex">
+              <input
+                type="number"
+                step="1"
+                min="0"
+                placeholder="Ej: 12"
+                value={newProduct.stock}
+                onChange={e => setNewProduct({ ...newProduct, stock: +e.target.value })}
+                className="p-3 rounded-l-lg bg-gray-700 text-white w-full"
+                aria-label="Stock actual"
+                required
+              />
+              <span className="p-3 rounded-r-lg bg-gray-600 text-white inline-flex items-center">unid</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Cantidad física disponible en inventario.</p>
+          </div>
+
+          {/* Precio de costo */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Precio de costo</label>
+            <div className="mt-1 flex">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Ej: 1000.00"
+                value={newProduct.cost_price}
+                onChange={e => setNewProduct({ ...newProduct, cost_price: +e.target.value })}
+                className="p-3 rounded-l-lg bg-gray-700 text-white w-full"
+                aria-label="Precio de costo en CUP"
+              />
+              <span className="p-3 rounded-r-lg bg-gray-600 text-white inline-flex items-center">CUP</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Costo al que compraste el producto.</p>
+          </div>
+
+          {/* Stock mínimo */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Stock mínimo</label>
+            <div className="mt-1 flex">
+              <input
+                type="number"
+                step="1"
+                min="0"
+                placeholder="Ej: 3"
+                value={newProduct.stock_minimum}
+                onChange={e => setNewProduct({ ...newProduct, stock_minimum: +e.target.value })}
+                className="p-3 rounded-l-lg bg-gray-700 text-white w-full"
+                aria-label="Stock mínimo"
+              />
+              <span className="p-3 rounded-r-lg bg-gray-600 text-white inline-flex items-center">unid</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Umbral para alertas de reabastecimiento.</p>
+          </div>
+
+          <textarea placeholder="Descripción" value={newProduct.description} onChange={e => setNewProduct({ ...newProduct, description: e.target.value })} className="p-3 rounded-lg bg-gray-700 text-white md:col-span-2" aria-label="Descripción del producto" />
+
           <div className="md:col-span-2 flex items-center gap-4">
-            <input type="file" accept="image/*" onChange={e => setNewProduct({ ...newProduct, imageFile: e.target.files?.[0] || null })} className="block text-sm text-gray-300" />
+            <input type="file" accept="image/*" onChange={e => setNewProduct({ ...newProduct, imageFile: e.target.files?.[0] || null })} className="block text-sm text-gray-300" aria-label="Imagen del producto" />
             <button onClick={handleCreateProduct} className="px-6 py-3 bg-green-600 rounded-2xl text-white font-semibold hover:bg-green-500">Crear Producto</button>
           </div>
         </div>
@@ -275,7 +380,7 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
               <img src={product.imageurl || `https://picsum.photos/seed/${product.id}/200`} alt={product.name} className="w-full h-40 object-cover rounded-lg mb-4" />
               <h3 className="text-xl font-bold text-white">{product.name}</h3>
               <p className="text-gray-400 text-sm mb-2">{product.category}</p>
-              <p className="text-white mb-1">Precio: ${(product.sale_price ?? product.price ?? 0).toFixed(2)}</p>
+              <p className="text-white mb-1">Precio: {(Number(product.sale_price ?? product.price ?? 0)).toFixed(2)} CUP</p>
               <p className="text-white">Stock: {product.stock ?? 0}</p>
             </div>
 
@@ -285,7 +390,7 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
             </div>
 
             <div className="mt-3 flex items-center gap-2">
-              <input type="file" accept="image/*" onChange={e => setSelectedImage(prev => ({ ...prev, [product.id]: e.target.files?.[0] || null }))} />
+              <input type="file" accept="image/*" onChange={e => setSelectedImage(prev => ({ ...prev, [product.id]: e.target.files?.[0] || null }))} aria-label={`Seleccionar imagen para ${product.name}`} />
               <button onClick={() => handleUploadImage(product.id)} className="px-3 py-1 bg-blue-600 text-white rounded">Subir imagen</button>
             </div>
           </div>
@@ -301,32 +406,49 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
 
               <div className="mt-4">
                 <label className="text-white mb-1 block">Cambiar imagen:</label>
-                <input type="file" accept="image/*" onChange={e => setEditImageFile(e.target.files?.[0] || null)} className="w-full text-sm text-gray-300" />
+                <input type="file" accept="image/*" onChange={e => setEditImageFile(e.target.files?.[0] || null)} className="w-full text-sm text-gray-300" aria-label="Cambiar imagen del producto" />
                 {editImageFile && <img src={URL.createObjectURL(editImageFile)} alt="Preview" className="mt-2 h-24 w-24 object-cover rounded-lg" />}
               </div>
 
               <div className="space-y-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Nombre</label>
-                  <input type="text" value={editProduct.name} onChange={e => setEditProduct({ ...editProduct, name: e.target.value })} className="w-full p-3 rounded bg-gray-700 text-white" />
+                  <input type="text" value={editProduct.name} onChange={e => setEditProduct({ ...editProduct, name: e.target.value })} className="w-full p-3 rounded bg-gray-700 text-white" aria-label="Editar nombre" />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Precio de venta</label>
-                  <input type="number" value={(editProduct as any).sale_price ?? (editProduct as any).price ?? 0} onChange={e => setEditProduct({ ...editProduct, sale_price: +e.target.value } as any)} className="w-full p-3 rounded bg-gray-700 text-white" />
+                  <div className="mt-1 flex">
+                    <input type="number" value={(editProduct as any).sale_price ?? (editProduct as any).price ?? 0} onChange={e => setEditProduct({ ...editProduct, sale_price: +e.target.value } as any)} className="w-full p-3 rounded-l bg-gray-700 text-white" aria-label="Editar precio de venta" />
+                    <span className="p-3 rounded-r bg-gray-600 text-white inline-flex items-center">CUP</span>
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Precio de costo</label>
-                  <input type="number" value={(editProduct as any).cost_price ?? 0} onChange={e => setEditProduct({ ...editProduct, cost_price: +e.target.value } as any)} className="w-full p-3 rounded bg-gray-700 text-white" />
+                  <div className="mt-1 flex">
+                    <input type="number" value={(editProduct as any).cost_price ?? 0} onChange={e => setEditProduct({ ...editProduct, cost_price: +e.target.value } as any)} className="w-full p-3 rounded-l bg-gray-700 text-white" aria-label="Editar precio de costo" />
+                    <span className="p-3 rounded-r bg-gray-600 text-white inline-flex items-center">CUP</span>
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Stock actual</label>
-                  <input type="number" value={(editProduct as any).stock ?? 0} onChange={e => setEditProduct({ ...editProduct, stock: +e.target.value } as any)} className="w-full p-3 rounded bg-gray-700 text-white" />
+                  <div className="mt-1 flex">
+                    <input type="number" value={(editProduct as any).stock ?? 0} onChange={e => setEditProduct({ ...editProduct, stock: +e.target.value } as any)} className="w-full p-3 rounded-l bg-gray-700 text-white" aria-label="Editar stock actual" />
+                    <span className="p-3 rounded-r bg-gray-600 text-white inline-flex items-center">unid</span>
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300">Stock mínimo</label>
-                  <input type="number" value={(editProduct as any).stock_minimum ?? 0} onChange={e => setEditProduct({ ...editProduct, stock_minimum: +e.target.value } as any)} className="w-full p-3 rounded bg-gray-700 text-white" />
+                  <div className="mt-1 flex">
+                    <input type="number" value={(editProduct as any).stock_minimum ?? 0} onChange={e => setEditProduct({ ...editProduct, stock_minimum: +e.target.value } as any)} className="w-full p-3 rounded-l bg-gray-700 text-white" aria-label="Editar stock mínimo" />
+                    <span className="p-3 rounded-r bg-gray-600 text-white inline-flex items-center">unid</span>
+                  </div>
                 </div>
-                <textarea value={editProduct.description || ''} onChange={e => setEditProduct({ ...editProduct, description: e.target.value } as any)} className="w-full p-3 rounded bg-gray-700 text-white" />
+
+                <textarea value={editProduct.description || ''} onChange={e => setEditProduct({ ...editProduct, description: e.target.value } as any)} className="w-full p-3 rounded bg-gray-700 text-white" aria-label="Editar descripción" />
               </div>
             </div>
 
