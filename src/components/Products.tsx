@@ -389,9 +389,44 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts }) => {
               <button onClick={() => { setEditProduct(product); setIsEditing(true); }} className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-500">Editar</button>
             </div>
 
-            <div className="mt-3 flex items-center gap-2">
-              <input type="file" accept="image/*" onChange={e => setSelectedImage(prev => ({ ...prev, [product.id]: e.target.files?.[0] || null }))} aria-label={`Seleccionar imagen para ${product.name}`} />
-              <button onClick={() => handleUploadImage(product.id)} className="px-3 py-1 bg-blue-600 text-white rounded">Subir imagen</button>
+
+            {/* Upload control (card) */}
+            <div className="mt-3 flex items-center gap-3">
+              {/* Input oculto */}
+              <input
+                id={`file-${product.id}`}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={e => setSelectedImage(prev => ({ 
+                  ...prev, 
+                  [product.id]: e.target.files?.[0] || null 
+                }))}
+              />
+
+              {/* Label actuando como botón para abrir selector */}
+              <label htmlFor={`file-${product.id}`} className="px-3 py-1 bg-gray-700 text-white rounded cursor-pointer hover:bg-gray-600">
+                Seleccionar...
+              </label>
+
+              {/* Botón subir (usa tu handler actual) */}
+              <button onClick={() => handleUploadImage(product.id)} className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-500">
+                Subir imagen
+              </button>
+
+              {/* Preview/filename controlado y truncado para evitar overflow */}
+              {selectedImage[product.id] ? (
+                <div className="ml-2 flex items-center gap-2">
+                  <img
+                    src={URL.createObjectURL(selectedImage[product.id])}
+                    alt="preview"
+                    className="h-10 w-10 object-cover rounded"
+                  />
+                  <span className="max-w-[120px] truncate text-sm text-gray-300">{selectedImage[product.id].name}</span>
+                </div>
+              ) : (
+                <span className="ml-2 text-sm text-gray-400 max-w-[120px] truncate">No hay archivo seleccionado</span>
+              )}
             </div>
           </div>
         ))}
