@@ -1,3 +1,4 @@
+// src/components/Sidebar.tsx
 import React from 'react';
 import {
   ChartBarIcon,
@@ -5,6 +6,7 @@ import {
   CubeIcon,
   DocumentChartBarIcon,
   CpuChipIcon,
+  CurrencyDollarIcon,
 } from '@heroicons/react/24/outline';
 import { AppView } from '../types';
 
@@ -18,6 +20,8 @@ const navItems = [
   { id: 'POS', label: 'Punto de Venta', icon: ShoppingCartIcon },
   { id: 'PRODUCTS', label: 'Productos', icon: CubeIcon },
   { id: 'REPORTS', label: 'Reportes', icon: DocumentChartBarIcon },
+  // NUEVO: entrada para administrar la tasa
+  { id: 'EXCHANGE', label: 'Tasa (USD → CUP)', icon: CurrencyDollarIcon },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
@@ -25,7 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView }) => {
     <aside className="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-800 border-r border-gray-700 px-6 pb-4 w-full lg:w-64">
       <div className="flex h-16 shrink-0 items-center gap-x-4">
          <CpuChipIcon className="h-8 w-8 text-indigo-400" />
-        <span className="text-2xl font-bold text-white">OmniPOS</span>
+        <span className="text-2xl font-bold text-white">Maybe</span>
       </div>
       <nav className="flex flex-1 flex-col">
         <ul role="list" className="flex flex-1 flex-col gap-y-7">
