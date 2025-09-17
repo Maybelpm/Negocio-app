@@ -4,7 +4,6 @@ const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -14,18 +13,11 @@ function nowIso() {
 
 exports.handler = async (event) => {
   try {
-    // Auth simple
-    const incomingSecret = (event.headers && (event.headers['x-admin-secret'] || event.headers['X-Admin-Secret'])) || '';
-    if (!ADMIN_SECRET || incomingSecret !== ADMIN_SECRET) {
-      return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
-    }
-
     const body = event.body ? JSON.parse(event.body) : {};
     const currencyFrom = (body.currency_from || 'USD').toUpperCase();
     const currencyTo = (body.currency_to || 'CUP').toUpperCase();
     const providedRate = body.rate ? Number(body.rate) : null;
 
-    // obtener rate si no fue provista
     let rate = providedRate;
     if (!rate) {
       const { data: rateRow, error: rateErr } = await supabase
@@ -49,7 +41,6 @@ exports.handler = async (event) => {
 
     const now = nowIso();
 
-    // Actualizamos sale_price donde sale_price_currency = currencyFrom
     const { error: saleErr } = await supabase
       .from('products')
       .update({
@@ -64,7 +55,6 @@ exports.handler = async (event) => {
       return { statusCode: 500, body: JSON.stringify({ error: saleErr.message }) };
     }
 
-    // Actualizamos cost_price donde cost_price_currency = currencyFrom
     const { error: costErr } = await supabase
       .from('products')
       .update({
@@ -79,7 +69,6 @@ exports.handler = async (event) => {
       return { statusCode: 500, body: JSON.stringify({ error: costErr.message }) };
     }
 
-    // contar cantidad actualizada (opcional)
     const { count: saleCount } = await supabase
       .from('products')
       .select('id', { count: 'exact', head: true })
