@@ -47,7 +47,7 @@ export interface Sale {
   total: number;
 }
 
-export type AppView = 'DASHBOARD' | 'POS' | 'PRODUCTS' | 'REPORTS';
+export type AppView = 'DASHBOARD' | 'POS' | 'PRODUCTS' | 'REPORTS' | 'EXCHANGE';
 
 // Supabase DB schema matching the README.md SQL script
 export interface Database {

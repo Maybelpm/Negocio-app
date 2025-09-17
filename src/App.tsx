@@ -8,6 +8,8 @@ import ProductsView from '@/components/Products';
 import POSView from '@/components/POS';
 import ReportsView from '@/components/Reports';
 import { AppShell } from '@/components/AppShell';
+import AdminRatePanel from '@/components/AdminRatePanel';
+
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('DASHBOARD');
@@ -229,6 +231,8 @@ const App: React.FC = () => {
         return <ProductsView products={products} setProducts={setProducts} usdToCupRate={usdToCupRate ?? 0} />;
       case 'REPORTS':
         return <ReportsView sales={sales} onRevertSale={handleRevertSale} />;
+      case 'EXCHANGE':
+        return <AdminRatePanel />;
       default:
         return <Dashboard products={products} sales={sales} />;
     }
