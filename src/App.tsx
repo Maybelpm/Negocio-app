@@ -1,3 +1,4 @@
+// src/App.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Product, Sale, AppView, CartItem, SaleItem } from './types';
 import { supabase } from '@/lib/supabaseClient';
@@ -14,6 +15,9 @@ const App: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // tasa USD -> CUP (se inicializa con null hasta fetch)
+  const [usdToCupRate, setUsdToCupRate] = useState<number | null>(null);
 
   const isSupabaseConfigured = !!supabase;
 
@@ -32,7 +36,7 @@ const App: React.FC = () => {
       const salesPromise = supabase
         .from('sales')
         .select('*')
-        .neq('is_canceled', true)              // <— excluye anuladas
+        .neq('is_canceled', true)
         .order('created_at', { ascending: false });
 
       const [{ data: productsData, error: productsError }, { data: salesData, error: salesError }] = await Promise.all([productsPromise, salesPromise]);
@@ -40,22 +44,23 @@ const App: React.FC = () => {
       if (productsError) throw productsError;
       if (salesError) throw salesError;
 
-    // Normaliza productos: garantiza que el front use `price`, `imageUrl`, etc.
-    const normalizedProducts = (productsData || []).map((p: any) => ({
-      ...p,
-      // price en front será el sale_price de la BD (fallbacks por seguridad)
-      price: Number(p.sale_price ?? p.price ?? 0),
-      cost_price: Number(p.cost_price ?? 0),
-      stock_minimum: Number(p.stock_minimum ?? 0),
-      // imagen: mantener ambos nombres por compatibilidad
-      imageurl: p.imageurl ?? p.image_url ?? p.imageUrl ?? '',
-      imageUrl: p.imageurl ?? p.image_url ?? p.imageUrl ?? '',
-    }));
+      // Normaliza productos: garantiza que el front use price, sale_price_amount, sale_price_currency, imageurl, etc.
+      const normalizedProducts = (productsData || []).map((p: any) => ({
+        ...p,
+        // price en front será el sale_price_amount (fallbacks por seguridad)
+        sale_price_amount: p.sale_price_amount ?? p.sale_price ?? 0,
+        sale_price_currency: p.sale_price_currency ?? 'CUP',
+        cost_price_amount: p.cost_price_amount ?? p.cost_price ?? 0,
+        cost_price_currency: p.cost_price_currency ?? 'CUP',
+        price: Number(p.sale_price_amount ?? p.sale_price ?? 0),
+        cost_price: Number(p.cost_price_amount ?? p.cost_price ?? 0),
+        stock_minimum: Number(p.stock_minimum ?? 0),
+        imageurl: p.imageurl ?? p.image_url ?? p.imageUrl ?? '',
+        imageUrl: p.imageurl ?? p.image_url ?? p.imageUrl ?? '',
+      }));
 
-    setProducts(normalizedProducts as Product[]);
-    setSales(salesData as Sale[] || []);
-
-
+      setProducts(normalizedProducts as Product[]);
+      setSales(salesData as Sale[] || []);
     } catch (err: any) {
       console.error('Error fetching data:', err);
       setError('No se pudieron cargar los datos. Verifique la conexión y la configuración de Supabase.');
@@ -73,7 +78,7 @@ const App: React.FC = () => {
     fetchData();
   }, [fetchData, isSupabaseConfigured]);
 
-  // Set up real-time subscription for product stock changes
+  // Real-time subscription for products (stock changes etc.)
   useEffect(() => {
     if (!isSupabaseConfigured) return;
 
@@ -102,6 +107,44 @@ const App: React.FC = () => {
           setError('Error de conexión en tiempo real.');
         }
       });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isSupabaseConfigured]);
+
+  // Fetch initial USD->CUP rate and subscribe to exchange_rates changes (realtime)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    // fetch initial rate
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('exchange_rates')
+          .select('rate, currency_from, currency_to')
+          .eq('currency_from', 'USD')
+          .eq('currency_to', 'CUP')
+          .limit(1)
+          .single();
+
+        if (!error && data) setUsdToCupRate(Number(data.rate));
+      } catch (err) {
+        console.error('Error cargando tasa inicial:', err);
+      }
+    })();
+
+    // realtime subscription for exchange_rates
+    const channel = supabase.channel('realtime-exchange');
+    channel
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'exchange_rates' }, (payload) => {
+        const n = payload.new;
+        if (!n) return;
+        if (n.currency_from === 'USD' && n.currency_to === 'CUP') {
+          setUsdToCupRate(Number(n.rate));
+        }
+      })
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -159,7 +202,7 @@ const App: React.FC = () => {
       return;
     }
     // recarga productos y ventas
-    await fetchData();    // ya viene en App y refresca productos+ventas
+    await fetchData();
     alert('Venta anulada y stock restaurado.');
   }, [fetchData]); 
 
@@ -180,9 +223,10 @@ const App: React.FC = () => {
       case 'DASHBOARD':
         return <Dashboard products={products} sales={sales} />;
       case 'POS':
+        // si quieres que POS use usdToCupRate, pásala también a POSView y adaptalo
         return <POSView products={products} onSale={handleSale} />;
       case 'PRODUCTS':
-        return <ProductsView products={products} setProducts={setProducts} />;
+        return <ProductsView products={products} setProducts={setProducts} usdToCupRate={usdToCupRate ?? 0} />;
       case 'REPORTS':
         return <ReportsView sales={sales} onRevertSale={handleRevertSale} />;
       default:
@@ -200,3 +244,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

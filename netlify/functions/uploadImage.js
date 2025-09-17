@@ -7,6 +7,25 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+function guessContentType(filename = '') {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  switch (ext) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'png':
+      return 'image/png';
+    case 'gif':
+      return 'image/gif';
+    case 'webp':
+      return 'image/webp';
+    case 'svg':
+      return 'image/svg+xml';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
 exports.handler = async function(event) {
   try {
     // 1) Parse request
@@ -14,18 +33,17 @@ exports.handler = async function(event) {
     if (!productId || !fileName || !fileBase64) {
       return { statusCode: 400, body: 'Missing parameters' };
     }
-    console.log('→ service_role key present?', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-    console.log('→ VITE_SUPABASE_URL =', process.env.VITE_SUPABASE_URL);
-    console.log('→ upload path =', `${productId}/${fileName}`);
+
     // 2) Decode and prepare buffer
     const buffer = Buffer.from(fileBase64, 'base64');
     const path = `${productId}/${fileName}`;
+    const contentType = guessContentType(fileName);
 
     // 3) Upload to Storage
     const { error: upErr } = await supabase
       .storage
       .from('product-images')
-      .upload(path, buffer, { upsert: true, contentType: 'image/png' });
+      .upload(path, buffer, { upsert: true, contentType });
     if (upErr) throw upErr;
 
     // 4) Get public URL

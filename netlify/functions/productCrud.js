@@ -7,6 +7,25 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+function guessContentType(filename = '') {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  switch (ext) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg';
+    case 'png':
+      return 'image/png';
+    case 'gif':
+      return 'image/gif';
+    case 'webp':
+      return 'image/webp';
+    case 'svg':
+      return 'image/svg+xml';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
 exports.handler = async (event) => {
   const { httpMethod, body } = event;
 
@@ -36,13 +55,17 @@ exports.handler = async (event) => {
 
       // 3. Borrar imagen del bucket si hay ruta
       if (imagePath) {
-        const { error: deleteImageError } = await supabase.storage
-          .from('product-images')
-          .remove([imagePath]);
+        try {
+          const { error: deleteImageError } = await supabase.storage
+            .from('product-images')
+            .remove([imagePath]);
 
-        if (deleteImageError) {
-          console.warn('Error deleting image:', deleteImageError.message);
-          // no cortamos el flujo si falla
+          if (deleteImageError) {
+            console.warn('Error deleting image:', deleteImageError.message);
+            // no cortamos el flujo si falla
+          }
+        } catch (err) {
+          console.warn('Error deleting image (caught):', err);
         }
       }
 
@@ -63,37 +86,51 @@ exports.handler = async (event) => {
       const {
         id,
         name,
-        sale_price,
-        price,
         stock,
         description,
         category,
+        // legacy fields (support)
+        sale_price,
         cost_price,
         stock_minimum,
+        // new schema fields
+        sale_price_amount,
+        sale_price_currency,
+        cost_price_amount,
+        cost_price_currency,
+        unit_of_measure,
+        // image data (optional)
         fileName,
         fileBase64
       } = payload;
 
+      if (!id) {
+        return { statusCode: 400, body: 'Missing product id' };
+      }
+
       try {
         let publicURL = null;
 
-        // Subir imagen si viene en el payload
+        // Subir imagen si viene en el payload (same logic as uploadImage fn)
         if (fileBase64 && fileName) {
           const buffer = Buffer.from(fileBase64, 'base64');
           const path = `${id}/${fileName}`;
 
+          const contentType = guessContentType(fileName);
+
           const { error: upErr } = await supabase
             .storage
             .from('product-images')
-            .upload(path, buffer, { upsert: true });
+            .upload(path, buffer, { upsert: true, contentType });
 
           if (upErr) throw upErr;
 
-          const { data: urlData } = supabase
+          const { data: urlData, error: urlErr } = supabase
             .storage
             .from('product-images')
             .getPublicUrl(path);
 
+          if (urlErr) throw urlErr;
           publicURL = urlData.publicUrl;
         }
 
@@ -103,32 +140,68 @@ exports.handler = async (event) => {
           stock,
           description,
           category,
-          cost_price,
-          stock_minimum
+          stock_minimum,
+          unit_of_measure
         };
+
+        // Añadimos nuevos campos si vienen
+        if (typeof sale_price_amount !== 'undefined') baseUpdate.sale_price_amount = sale_price_amount;
+        if (typeof sale_price_currency !== 'undefined') baseUpdate.sale_price_currency = sale_price_currency;
+        if (typeof cost_price_amount !== 'undefined') baseUpdate.cost_price_amount = cost_price_amount;
+        if (typeof cost_price_currency !== 'undefined') baseUpdate.cost_price_currency = cost_price_currency;
+
+        // Si hay URL de imagen, actualizamos
         if (publicURL) baseUpdate.imageurl = publicURL;
 
-        // Preferimos sale_price (schema actual), pero si viene price también lo aceptamos
-        if (typeof sale_price !== 'undefined' || typeof price !== 'undefined') {
-          const priceToUse = typeof sale_price !== 'undefined' ? sale_price : price;
-          const updateObj = { ...baseUpdate, sale_price: priceToUse };
+        // --- Compatibilidad: también actualizamos las columnas legacy sale_price/cost_price
+        // Si la nueva moneda es USD, convertimos a CUP usando la tasa actual en exchange_rates.
+        // Si no hay tasa, dejamos el campo legacy igual al amount (no ideal pero evita null).
+        let legacySale = typeof sale_price !== 'undefined' ? sale_price : undefined;
+        let legacyCost = typeof cost_price !== 'undefined' ? cost_price : undefined;
 
-          const { error: updErr } = await supabase
-            .from('products')
-            .update(updateObj)
-            .eq('id', id);
+        // Fetch rate USD->CUP si hace falta
+        let usdToCupRate = null;
+        if ((baseUpdate.sale_price_amount && baseUpdate.sale_price_currency === 'USD') ||
+            (baseUpdate.cost_price_amount && baseUpdate.cost_price_currency === 'USD')) {
+          const { data: rateRow, error: rateErr } = await supabase
+            .from('exchange_rates')
+            .select('rate')
+            .eq('currency_from', 'USD')
+            .eq('currency_to', 'CUP')
+            .limit(1)
+            .single();
 
-          if (updErr) throw updErr;
-          return { statusCode: 200, body: 'OK' };
+          if (!rateErr && rateRow) usdToCupRate = Number(rateRow.rate);
         }
 
-        // Si no hay price en payload, actualizamos solo lo demás
-        const { error: finalErr } = await supabase
+        if (typeof baseUpdate.sale_price_amount !== 'undefined') {
+          if ((baseUpdate.sale_price_currency || '').toUpperCase() === 'USD') {
+            legacySale = Number(baseUpdate.sale_price_amount) * (Number(usdToCupRate) || 0);
+          } else {
+            legacySale = Number(baseUpdate.sale_price_amount) || 0;
+          }
+        }
+
+        if (typeof baseUpdate.cost_price_amount !== 'undefined') {
+          if ((baseUpdate.cost_price_currency || '').toUpperCase() === 'USD') {
+            legacyCost = Number(baseUpdate.cost_price_amount) * (Number(usdToCupRate) || 0);
+          } else {
+            legacyCost = Number(baseUpdate.cost_price_amount) || 0;
+          }
+        }
+
+        // Si no se proporcionaron nuevos campos pero sí legacy en el payload, mantenemos esos
+        if (typeof legacySale !== 'undefined') baseUpdate.sale_price = legacySale;
+        if (typeof legacyCost !== 'undefined') baseUpdate.cost_price = legacyCost;
+
+        // Actualizar fila
+        const { error: updErr } = await supabase
           .from('products')
           .update(baseUpdate)
           .eq('id', id);
 
-        if (finalErr) throw finalErr;
+        if (updErr) throw updErr;
+
         return { statusCode: 200, body: 'OK' };
       } catch (err) {
         console.error('productCrud PUT error', err);
