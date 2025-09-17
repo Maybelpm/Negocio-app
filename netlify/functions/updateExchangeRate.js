@@ -4,22 +4,11 @@ const { createClient } = require('@supabase/supabase-js');
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Supabase env missing');
-}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 exports.handler = async (event) => {
   try {
-    // Auth simple: header x-admin-secret
-    const incomingSecret = (event.headers && (event.headers['x-admin-secret'] || event.headers['X-Admin-Secret'])) || '';
-    if (!ADMIN_SECRET || incomingSecret !== ADMIN_SECRET) {
-      return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
-    }
-
     const body = event.body ? JSON.parse(event.body) : {};
     const currency_from = (body.currency_from || 'USD').toUpperCase();
     const currency_to = (body.currency_to || 'CUP').toUpperCase();
@@ -29,7 +18,6 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'currency_from, currency_to y rate (>0) son requeridos' }) };
     }
 
-    // obtener fila previa
     const { data: existing } = await supabase
       .from('exchange_rates')
       .select('*')
@@ -50,7 +38,7 @@ exports.handler = async (event) => {
       return { statusCode: 500, body: JSON.stringify({ error: upsertErr.message }) };
     }
 
-    // guardar en history (no falla el proceso si hay error)
+    // history (best-effort)
     await supabase
       .from('exchange_rates_history')
       .insert({
@@ -68,3 +56,4 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: err.message || String(err) }) };
   }
 };
+
