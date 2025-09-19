@@ -10,6 +10,16 @@ interface ProductsProps {
 }
 
 const Products: React.FC<ProductsProps> = ({ products, setProducts, usdToCupRate = 0 }) => {
+  // helper para convertir amount+currency -> legacy price (CUP)
+  const toLegacyPrice = (amount: number, currency: string, usdToCupRate = 1) => {
+    const a = Number(amount) || 0;
+    if ((currency || '').toUpperCase() === 'USD') {
+      const rate = Number(usdToCupRate) || 1;
+      return Number((a * rate).toFixed(2));
+    }
+    return Number(a.toFixed(2));
+  };
+
   const [newProduct, setNewProduct] = useState({
     name: '',
     description: '',
@@ -126,69 +136,94 @@ const Products: React.FC<ProductsProps> = ({ products, setProducts, usdToCupRate
   };
 
   const handleCreateProduct = async () => {
-    // coerción segura
-    const sale_amount = Number(newProduct.sale_price_amount) || 0;
-    const cost_amount = Number(newProduct.cost_price_amount) || 0;
-    const stock = Number(newProduct.stock) || 0;
-    const stock_minimum = Number(newProduct.stock_minimum) || 0;
+    try {
+      // coerción segura
+      const sale_amount = Number(newProduct.sale_price_amount) || 0;
+      const cost_amount = Number(newProduct.cost_price_amount) || 0;
+      const stock = Number(newProduct.stock) || 0;
+      const stock_minimum = Number(newProduct.stock_minimum) || 0;
 
-    if (!newProduct.name || sale_amount <= 0 || stock < 0) {
-      return alert('Nombre, precio de venta (>0) y stock (>=0) son obligatorios y válidos');
-    }
+      if (!newProduct.name || sale_amount <= 0 || stock < 0) {
+        return alert('Nombre, precio de venta (>0) y stock (>=0) son obligatorios y válidos');
+      }
 
-    // Insert product with new schema fields (backend/netlify function will handle legacy if needed)
-    const { data: created, error: insErr } = await supabase
-      .from('products')
-      .insert({
+      // Preparamos payload base
+      const payload: any = {
         name: newProduct.name,
         description: newProduct.description,
         sale_price_amount: sale_amount,
-        sale_price_currency: newProduct.sale_price_currency,
+        sale_price_currency: newProduct.sale_price_currency || 'CUP',
         cost_price_amount: cost_amount,
-        cost_price_currency: newProduct.cost_price_currency,
+        cost_price_currency: newProduct.cost_price_currency || 'CUP',
         stock,
         stock_minimum,
-        category: newProduct.category,
-        unit_of_measure: newProduct.unit_of_measure,
-        imageurl: ''
-      })
-      .select()
-      .single();
+        category: newProduct.category || '',
+        unit_of_measure: newProduct.unit_of_measure || 'unid',
+        // opcional: si tu App pasa usdToCupRate, envíalo para que el server calcule legacy correctamente
+        rate_for_conversion: typeof usdToCupRate !== 'undefined' && Number(usdToCupRate) > 0 ? Number(usdToCupRate) : undefined
+      };
 
-    if (insErr || !created) {
-      console.error('CREATE ERROR', insErr);
-      return alert('Error creando producto: ' + (insErr?.message || String(insErr)));
-    }
-
-    // upload image via netlify function if exists
-    if (newProduct.imageFile) {
-      try {
-        const rawName = newProduct.imageFile.name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+      // Si hay imagen, la convertimos a base64 y añadimos fileName + fileBase64
+      if (newProduct.imageFile) {
+        const file = newProduct.imageFile;
+        const rawName = file.name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
         const safeName = rawName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-        const reader = new FileReader();
-        reader.readAsDataURL(newProduct.imageFile);
-        reader.onloadend = async () => {
-          const base64 = (reader.result as string).split(',')[1];
-          const res = await fetch('/.netlify/functions/uploadImage', {
-            method: 'POST',
-            body: JSON.stringify({ productId: created.id, fileName: safeName, fileBase64: base64 }),
-          });
-          const json = await res.json().catch(() => ({}));
-          if (!res.ok) {
-            console.error('Fn upload error', json);
-            alert('Error subiendo imagen al crear: ' + (json?.error || 'unknown'));
-          }
-          await fetchProducts();
-        };
-      } catch (e) {
-        console.error('Error procesando imagen al crear:', e);
-      }
-    } else {
-      await fetchProducts();
-    }
 
-    setNewProduct({ name: '', description: '', sale_price_amount: 0, sale_price_currency: 'CUP', cost_price_amount: 0, cost_price_currency: 'CUP', stock: 0, stock_minimum: 0, category: '', unit_of_measure: 'unid', imageFile: null });
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const r = new FileReader();
+          r.onerror = () => reject(new Error('Error leyendo archivo'));
+          r.onloadend = () => {
+            const result = r.result as string;
+            // result = "data:<mime>;base64,AAAA..."
+            const split = result.split(',');
+            resolve(split[1] ?? '');
+          };
+          r.readAsDataURL(file);
+        });
+
+        payload.fileName = safeName;
+        payload.fileBase64 = base64;
+      }
+
+      // Llamamos a la Netlify Function productCrud (POST crea producto)
+      const res = await fetch('/.netlify/functions/productCrud', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        console.error('CREATE ERROR', json);
+        return alert('Error creando producto: ' + (json?.error || 'unknown'));
+      }
+
+      // Si la función devolvió el producto creado en json -> refrescamos productos
+      await fetchProducts();
+
+      // limpiar formulario
+      setNewProduct({
+        name: '',
+        description: '',
+        sale_price_amount: 0,
+        sale_price_currency: 'CUP',
+        cost_price_amount: 0,
+        cost_price_currency: 'CUP',
+        stock: 0,
+        stock_minimum: 0,
+        category: '',
+        unit_of_measure: 'unid',
+        imageFile: null,
+      });
+
+    } catch (err: any) {
+      console.error('handleCreateProduct error', err);
+      alert('Error creando producto: ' + (err?.message || String(err)));
+    }
   };
+
+
 
   const handleDeleteProduct = async (id: string) => {
     if (!confirm('¿Eliminar este producto?')) return;
